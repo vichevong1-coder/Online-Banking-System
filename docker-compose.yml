@@ -1,0 +1,54 @@
+# Local development services for the Online Banking System (US-001).
+#
+#   docker compose up -d        start postgres + mailpit
+#   docker compose down         stop them (data survives)
+#   docker compose down -v      stop and wipe the database
+#
+# Postgres credentials match .github/workflows/backend-ci.yml so that local runs
+# and CI behave identically. Override via a root .env file if you need to.
+#
+# Mailpit is the local mail server: the backend sends OTP and statement emails to
+# it over SMTP on 1025, and you read them in the web inbox at localhost:8025.
+# Nothing leaves your machine.
+
+name: obs
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: obs-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-obs}
+      POSTGRES_USER: ${DB_USERNAME:-obs}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-obs}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # Same probe CI uses. Depending services can wait on this rather than
+      # racing the database during startup.
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-obs} -d ${DB_NAME:-obs}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: obs-mailpit
+    ports:
+      - "1025:1025"   # SMTP — spring.mail.port
+      - "8025:8025"   # web inbox — http://localhost:8025
+    environment:
+      MP_MAX_MESSAGES: 500
+      # Accept any credentials and plain-text auth: this is a throwaway local
+      # mailbox, and it means the backend's mail config works unchanged whether
+      # it points here or at a real provider later (US-057).
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
