@@ -1,11 +1,30 @@
-import { Button } from '@/components/ui/button'
+import { BrowserRouter, Navigate, Route, Routes } from "react-router"
+import { Toaster } from "sonner"
+
+import { AuthProvider } from "@/features/auth/auth-context"
+import { LoginPage } from "@/features/auth/LoginPage"
+import { TwoFactorPage } from "@/features/auth/TwoFactorPage"
+import { AppShellLayout } from "@/features/shell/AppShellLayout"
+import { OverviewPage } from "@/features/shell/OverviewPage"
+import { ProtectedRoute } from "@/features/shell/ProtectedRoute"
 
 function App() {
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-4">
-      <h1 className="text-2xl font-semibold">Online Banking — Admin</h1>
-      <Button>Get started</Button>
-    </div>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/verify-2fa" element={<TwoFactorPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppShellLayout />}>
+              <Route path="/" element={<OverviewPage />} />
+            </Route>
+          </Route>
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+      <Toaster />
+    </AuthProvider>
   )
 }
 
