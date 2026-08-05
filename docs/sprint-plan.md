@@ -58,29 +58,40 @@ Build them in this sequence. Token handling and the role/status model come *befo
 - **US-004** JWT / session token handling `[BE]`
 - **US-005** Role model & JWT role claims `[BE]`
 - **US-006** Account status model & login-path enforcement (active / suspended / locked) `[BE]`
-- **US-007** Customer registration – KYC form & ID upload `[Flutter]` `[BE]`
-- **US-008** Email / phone verification (OTP) `[BE]` `[Flutter]`
+- **US-007** Customer registration – KYC form & manual ID entry `[Flutter]` `[BE]`
+- **US-008** Phone verification (OTP via SMS) `[BE]` `[Flutter]`
 - **US-009** Customer login (mobile) `[Flutter]` `[BE]`
 - **US-010** Staff / admin login (web) `[React]` `[BE]`
-- **US-011** Two-factor authentication – OTP / authenticator app `[BE]` `[Flutter]`
+- **US-011** Two-factor authentication – OTP via SMS `[BE]` `[Flutter]`
 - **US-012** Two-factor authentication enforcement for admin accounts `[BE]` `[React]`
 
 ### US-001 acceptance criteria — note
 
-Includes a `docker-compose.yml` with **two** services: `postgres:17-alpine` (matching `backend-ci.yml`) and `axllent/mailpit`. Migration tooling (Flyway or Liquibase) is named here, not improvised later.
+Includes a `docker-compose.yml` with **two** services: `postgres:17-alpine` (matching `backend-ci.yml`) and `axllent/mailpit`. Migration tooling (Flyway or Liquibase) is named here, not improvised later. Mailpit stays in the stack for US-020's statement email in Sprint 2 even though OTP no longer uses email — see below.
 
-### OTP & email delivery
+### US-007 acceptance criteria — note
 
-OTP email is delivered for real over SMTP to a local **Mailpit** container — `1025` for SMTP, `8025` for the web inbox. This is what makes US-008 and US-020 demoable rather than log lines.
+The KYC form collects exactly: **first name, last name, Cambodian NID number, NID expiry date, date of birth, gender**, plus the **phone number** used for OTP delivery (US-008). **No email field.** Customers are not identified or contacted by email anywhere in the registration or verification flow.
+
+### US-010 acceptance criteria — note
+
+Admin/staff accounts log in with **email**, not phone. This is the one place email exists in the system: the `users` table's `email` column is populated only for `ADMIN` rows and stays `NULL` for customers, who never have one (US-007). Admin rows still carry a `phone` too, but only as the destination for SMS-based 2FA (US-012, same `OtpSender` channel as everyone else) — it plays no part in sign-in.
+
+2FA is mandatory for every account, not just admin — `POST /auth/login` never returns real tokens directly; it always returns a short-lived challenge token that must be redeemed at `/auth/2fa/verify` (US-011 for customers, US-012 for admin). There is no per-user toggle to skip it. This settles the deliverable line below in favor of "enforced" for both roles, not just admin.
+
+There is no self-registration for staff/admin accounts, and the real admin-provisions-staff flow is US-047 in Sprint 5 — so Sprint 1 needs a way for an admin account to exist before that flow is built. It's seeded: a Flyway migration (`V2__seed_bootstrap_admin.sql`) inserts one `ADMIN` row with credentials sourced from `ADMIN_BOOTSTRAP_PASSWORD_HASH` / `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PHONE` env vars (throwaway local-demo defaults documented in `backend/.env.example`, same convention as `JWT_SECRET`), never hardcoded in the migration. Because the KYC columns (`nid_number`, `nid_expiry_date`, `date_of_birth`, `gender`) only apply to customers, that migration also relaxes them to nullable so the seeded admin row doesn't need placeholder ID data.
+
+### OTP & SMS delivery
+
+Registration and login OTPs go out over **SMS to the phone number on file** — email is never the delivery channel, for either customers or admin (see US-010's note: admin's email is a sign-in identifier, not an OTP destination). There is no real SMS provider wired up yet for local dev, so delivery is a **logging stub**: the code is written to the backend log (and can be surfaced in a dev-only response/console for demoing) rather than sent to a real handset.
 
 ```java
-public interface OtpSender { void send(String recipient, String code); }
+public interface OtpSender { void send(String phoneNumber, String code); }
 
-@Component @Profile("dev") class EmailOtpSender  implements OtpSender { /* -> Mailpit */ }
-@Component @Profile("dev") class LoggingSmsSender implements SmsSender { /* phone: log only */ }
+@Component @Profile("dev") class LoggingSmsSender implements OtpSender { /* phone: log only, no real provider yet */ }
 ```
 
-**The SMS channel is a logging stub for the entire project.** Only the email channel is real. US-060 in Sprint 6 swaps `EmailOtpSender` for a live provider behind the same interface.
+US-060 in Sprint 6 swaps `LoggingSmsSender` for a live SMS provider (e.g. Twilio) behind the same `OtpSender` interface — same swap shape as previously planned, just SMS instead of email. Email/SMTP + Mailpit is retained solely for US-020 (statement email), which is unrelated to OTP.
 
 ### Deliverable
 Authentication & Onboarding Module — register → OTP verify → customer login → 2FA → admin login with enforced 2FA.
@@ -230,7 +241,7 @@ Rate limiting was deliberately kept out of Sprint 1, which means US-058 adds pro
 Each needs a limit, a lockout policy that agrees with US-006's `LOCKED` status, and a regression test proving the existing happy path still passes.
 
 ### US-060 is a swap, not a build
-`EmailOtpSender` already exists from Sprint 1 behind the `OtpSender` interface. This story replaces the Mailpit-targeted implementation with a live provider — roughly an hour, not a sprint's worth of work.
+`LoggingSmsSender` already exists from Sprint 1 behind the `OtpSender` interface. This story replaces the logging stub with a live SMS provider — roughly an hour, not a sprint's worth of work.
 
 ### Additional Activities
 - System Integration Testing (SIT) — note that unit tests are written per-story throughout; Sprint 6 is *integration* testing, not "the sprint where testing happens." `backend-ci.yml` and `mobile-ci.yml` already run tests on every PR.
@@ -257,7 +268,7 @@ Demo-ready Online Banking System: Java backend API, React admin portal, and Flut
 | Sprint 5 | 9–10 | Admin Portal (7 screens) | 8 |
 | Sprint 6 | 11–12 | Audit, Security Hardening, Testing, Local Demo | 6 |
 
-Story count is a rough signal, not a measurement — US-007 (KYC form + ID upload, two layers) is not the same size as US-031 (favorites list, one layer). The distribution above is intended to keep the two hardest weeks (1–2, scaffolding three stacks from zero) from also being the fullest.
+Story count is a rough signal, not a measurement — US-007 (KYC form + manual ID entry, two layers) is not the same size as US-031 (favorites list, one layer). The distribution above is intended to keep the two hardest weeks (1–2, scaffolding three stacks from zero) from also being the fullest.
 
 The architecture splits across three layers: a Java / Spring Boot REST API as the single source of truth, a React portal for staff and administrators, and a Flutter mobile app for customers — all run locally for demo purposes rather than deployed to production infrastructure.
 
@@ -265,3 +276,5 @@ The architecture splits across three layers: a Java / Spring Boot REST API as th
 
 - **US-034 merchant QR spec** — seeded merchants, settlement behaviour, failure path.
 - **Notifications architecture note** — one `NotificationService` shared by US-022, US-023, US-035 and US-060, written before Sprint 2 starts.
+- **SMS provider choice for US-060** — no vendor picked yet for the live swap behind `OtpSender` (Twilio or similar); needed before Sprint 6 planning.
+- **US-020 email-address source** — statement email now has no KYC-collected email to send to, since registration dropped the email field. Needs a decision before Sprint 2: collect email separately (e.g. optional profile field) or drop US-020's email delivery.

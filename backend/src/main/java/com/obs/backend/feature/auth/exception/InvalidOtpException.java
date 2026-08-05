@@ -1,0 +1,8 @@
+package com.obs.backend.feature.auth.exception;
+
+public class InvalidOtpException extends RuntimeException {
+
+    public InvalidOtpException() {
+        super("Invalid or expired code");
+    }
+}
