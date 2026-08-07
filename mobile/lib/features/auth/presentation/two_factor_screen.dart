@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:mobile/core/api/api_client.dart';
+import 'package:mobile/features/account/presentation/dashboard_screen.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/jwt.dart';
-import 'package:mobile/features/auth/presentation/signed_in_screen.dart';
 
 const Map<String, String> _twoFactorErrorMessages = {
   'INVALID_OR_EXPIRED_OTP': 'That code is incorrect or has expired.',
@@ -84,7 +84,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
       }
       Navigator.of(
         context,
-      ).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => SignedInScreen(tokens: tokens)), (_) => false);
+      ).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => DashboardScreen(tokens: tokens)), (_) => false);
     } on ApiException catch (e) {
       if (!mounted) {
         return;
