@@ -1,0 +1,96 @@
+import { ApiError } from "@/features/auth/api"
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080"
+
+// Backend: com.obs.backend.common.dto.PageResponse
+export type PageResponse<T> = {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export type AccountStatus = "ACTIVE" | "SUSPENDED" | "LOCKED"
+
+// Backend: com.obs.backend.feature.admin.dto.CustomerSummaryResponse (US-054).
+// Note there is no email — customers are identified by phone and users.email is NULL for them
+// (US-007 collects no email address). Any UI that assumes an email here will render blank.
+export type CustomerSummary = {
+  id: string
+  firstName: string
+  lastName: string
+  phone: string
+  status: AccountStatus
+  phoneVerified: boolean
+  createdAt: string
+}
+
+// Backend: com.obs.backend.feature.admin.dto.CustomerDetailResponse (US-054).
+export type CustomerDetail = CustomerSummary & {
+  nidNumber: string | null
+  nidExpiryDate: string | null
+  dateOfBirth: string | null
+  gender: "MALE" | "FEMALE" | "OTHER" | null
+}
+
+// Backend: com.obs.backend.feature.account.dto.AccountResponse (US-049).
+export type Account = {
+  id: string
+  accountNumber: string
+  accountType: "SAVINGS" | "CHECKING"
+  currency: "USD" | "KHR"
+  balance: number
+  createdAt: string
+}
+
+async function authGet<T>(path: string, accessToken: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    throw new ApiError(response.status, payload?.error ?? "UNKNOWN_ERROR")
+  }
+  return response.json() as Promise<T>
+}
+
+export function searchCustomers(
+  accessToken: string,
+  options: { search?: string; page?: number; size?: number } = {},
+) {
+  const params = new URLSearchParams()
+  if (options.search) params.set("search", options.search)
+  params.set("page", String(options.page ?? 0))
+  params.set("size", String(options.size ?? 20))
+  return authGet<PageResponse<CustomerSummary>>(`/admin/customers?${params}`, accessToken)
+}
+
+export function getCustomer(accessToken: string, customerId: string) {
+  return authGet<CustomerDetail>(`/admin/customers/${customerId}`, accessToken)
+}
+
+export function getCustomerAccounts(accessToken: string, customerId: string) {
+  return authGet<Account[]>(`/admin/customers/${customerId}/accounts`, accessToken)
+}
+
+// Riel is conventionally written without decimal places, but Intl defaults KHR to two (it returns
+// "KHR 5,000,000.00"), so the fraction digits are overridden rather than left to the currency code.
+// USD keeps its two. Both accounts of a multi-currency customer sit in one list, so they have to
+// render side by side correctly.
+const ZERO_DECIMAL_CURRENCIES = new Set(["KHR"])
+
+export function formatMoney(amount: number, currency: string): string {
+  const fractionDigits = ZERO_DECIMAL_CURRENCIES.has(currency) ? 0 : 2
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(amount)
+}
+
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+}
