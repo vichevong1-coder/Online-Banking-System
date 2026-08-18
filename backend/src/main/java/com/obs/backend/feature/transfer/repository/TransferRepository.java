@@ -1,9 +1,17 @@
 package com.obs.backend.feature.transfer.repository;
 
 import com.obs.backend.feature.transfer.entity.Transfer;
+import com.obs.backend.feature.transfer.entity.TransferStatus;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Collection;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Extends {@link JpaSpecificationExecutor} because the US-050 monitoring feed
@@ -15,4 +23,33 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 public interface TransferRepository extends JpaRepository<Transfer, UUID>, JpaSpecificationExecutor<Transfer> {
 
     boolean existsByReference(String reference);
+
+    /** US-028 history: every transfer the caller sent or received, newest first. */
+    Page<Transfer> findByFromAccountIdInOrToAccountIdInOrderByCreatedAtDesc(
+            Collection<UUID> fromAccountIds, Collection<UUID> toAccountIds, Pageable pageable);
+
+    /**
+     * US-027 daily cap. Counts money <em>sent</em> only — matching on the
+     * destination too would double-count every own-accounts transfer, because
+     * both of its legs belong to the same customer.
+     *
+     * <p>The window is a UTC day, the bucketing Sprint 2 established for
+     * date-scoped queries.
+     */
+    @Query(
+            """
+            SELECT COALESCE(SUM(t.amount), 0)
+            FROM Transfer t
+            WHERE t.fromAccountId IN :accountIds
+              AND t.status = :status
+              AND t.currency = :currency
+              AND t.createdAt >= :from
+              AND t.createdAt < :toExclusive
+            """)
+    BigDecimal sumSentAmount(
+            @Param("accountIds") Collection<UUID> accountIds,
+            @Param("status") TransferStatus status,
+            @Param("currency") com.obs.backend.feature.account.entity.Currency currency,
+            @Param("from") Instant from,
+            @Param("toExclusive") Instant toExclusive);
 }

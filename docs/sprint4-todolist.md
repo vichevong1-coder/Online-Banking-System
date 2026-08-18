@@ -40,14 +40,14 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
 Neither is a story; both block US-025 and must land first.
 
-- [ ] **`transfers` as a first-class row.** The `transactions` table is a per-account ledger
+- [x] **`transfers` as a first-class row.** The `transactions` table is a per-account ledger
       (`account_id`, `amount`, `balance_after`) with no `transfer_id`, no counterparty and no status,
       so a transfer today is two unlinked rows. Add `V8__create_transfers_table.sql` creating
       `transfers (id, from_account_id, to_account_id NULL, external_ref, amount, currency, status,
       reference UNIQUE, created_at)` plus `transactions.transfer_id`, and have **one**
       `@Transactional` service method write the transfer and both legs together. US-028 (receipt),
       US-050 (feed) and US-053 (count & volume, which would otherwise double-count) all depend on it.
-- [ ] **Optimistic locking on `accounts.balance`.** `Account` has no `@Version` field today and
+- [x] **Optimistic locking on `accounts.balance`.** `Account` has no `@Version` field today and
       nothing takes a row lock, so two concurrent debits read the same balance and both write their
       own result — a lost update that lets the demo create money. Needs a `@Version` column +
       migration, a `409` (or a bounded retry) on `OptimisticLockingFailureException`, and a test that
