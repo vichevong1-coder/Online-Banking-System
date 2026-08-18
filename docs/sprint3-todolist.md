@@ -33,7 +33,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
 Neither exists today; both block a screen in this sprint.
 
-- [ ] `login_attempts` table + record every failed login — US-053's failed-login tile has no data
+- [x] `login_attempts` table + record every failed login — US-053's failed-login tile has no data
       source without it, and US-058's lockout policy (Sprint 6) reuses the same counter
 - [x] Account status **mutation** — `PATCH /admin/customers/{userId}/status`; `AccountStatusPolicy` still owns the login-side rule (US-048)
 
@@ -42,26 +42,26 @@ Neither exists today; both block a screen in this sprint.
 All of these are admin-only and must be role-guarded — `@PreAuthorize` on `ADMIN`, verified by a test
 that a `CUSTOMER` token gets `403`.
 
-- [ ] `POST /admin/me/password` — change own password (US-046)
+- [x] `POST /admin/me/password` — change own password (US-046)
 - [x] `GET /admin/customers` — searchable, paginated customer list (US-054)
 - [x] `GET /admin/customers/{userId}` — customer detail (US-054)
 - [x] `GET /admin/customers/{userId}/accounts` — that customer's accounts + balances (US-049)
 - [x] `PATCH /admin/customers/{userId}/status` — suspend / lock / reactivate (US-048)
-- [ ] `GET /admin/staff` — list staff accounts (US-047)
-- [ ] `POST /admin/staff` — create a staff account (US-047) — replaces the bootstrap-admin seed as the way staff come into existence
-- [ ] `PATCH /admin/staff/{userId}/role` — assign one `Role` value (US-047)
-- [ ] `GET /admin/kpis` — total customers, total accounts, failed-login count, today's transfer count & volume (US-053)
+- [x] `GET /admin/staff` — list staff accounts (US-047)
+- [x] `POST /admin/staff` — create a staff account (US-047) — replaces the bootstrap-admin seed as the way staff come into existence
+- [x] `PATCH /admin/staff/{userId}/role` — assign one `Role` value (US-047)
+- [x] `GET /admin/kpis` — total customers, total accounts, failed-login count, today's transfer count & volume (US-053)
 
 ## Web admin pages (`web-admin/`)
 
 Screens 0 (app shell) and 1 (login + 2FA) already exist from Sprint 1.
 
-- [ ] KPI home — screen 2 (US-053)
+- [x] KPI home — screen 2 (US-053)
 - [x] Customers table with search — screen 3 (US-054)
 - [x] Customer detail drawer: accounts + balances — screen 3 (US-049)
 - [x] Suspend / lock / reactivate actions in the drawer — screen 3 (US-048)
-- [ ] Roles screen: staff list, create staff, assign role — screen 5 (US-047)
-- [ ] Admin settings: change own password (US-046)
+- [x] Roles screen: staff list, create staff, assign role — screen 5 (US-047)
+- [x] Admin settings: change own password (US-046)
 
 **Build screens 2 and 3 with reusable table and filter components.** US-050 (Sprint 4), US-052
 (Sprint 5) and US-056 (Sprint 6) are then assembly rather than a rebuild — this is the single
@@ -69,9 +69,9 @@ highest-leverage decision in this sprint.
 
 ## Notifications (`backend/`)
 
-- [ ] `NotificationService` with pluggable channels (US-022) — blocked on the channel decision above
-- [ ] `notifications` table (US-022)
-- [ ] Balance-change alerts hooked to account balance mutations (US-023)
+- [x] `NotificationService` with pluggable channels (US-022) — blocked on the channel decision above
+- [x] `notifications` table (US-022)
+- [x] Balance-change alerts hooked to account balance mutations (US-023)
 
 US-035 (transfer notifications, Sprint 4) and US-060 (live provider, Sprint 6) both attach to this
 service rather than inventing their own path — build the seam now.
