@@ -72,7 +72,7 @@ plus a local `exception/` where the feature has its own error types.
 | `common/` | BUILT | `PageResponse`, `ValidationErrorResponse`, `GlobalExceptionHandler`. |
 | `config/` | BUILT | `OpenApiConfig` — springdoc, Swagger UI at `/swagger-ui.html`. |
 | `security/` | BUILT | `Role`, `AccountStatus`, `AccountStatusPolicy`, `CurrentUserProvider`, `SecurityConfig`, `jwt/`. |
-| `feature/admin` | BUILT (partial) | Staff-facing customer read APIs: `GET /admin/customers`, `/{id}`, `/{id}/accounts` (US-054, US-049), class-level `@PreAuthorize("hasRole('ADMIN')")`. US-047's staff/role endpoints and US-048's status mutation are still PLANNED. |
+| `feature/admin` | BUILT (partial) | Staff-facing customer APIs: `GET /admin/customers`, `/{id}`, `/{id}/accounts` (US-054, US-049) and `PATCH /{id}/status` (US-048), class-level `@PreAuthorize("hasRole('ADMIN')")`. US-047's staff/role endpoints, US-046's password change and US-053's KPIs are still PLANNED. |
 | `feature/transfer` | PLANNED | Sprint 4 (US-025 – US-035). Needs a `transfers` table + `transactions.transfer_id` as a prerequisite — see **H1**. |
 | `feature/beneficiary` | PLANNED | Sprint 4 backend, Sprint 5 mobile (US-029 – US-031). |
 | `feature/billpayment` | PLANNED | Sprint 5 (US-038 – US-042). |

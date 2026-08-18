@@ -1,4 +1,7 @@
+import { useState } from "react"
+
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -6,6 +9,7 @@ import {
   formatDate,
   formatMoney,
   type Account,
+  type AccountStatus,
   type CustomerDetail,
   type CustomerSummary,
 } from "@/features/customers/api"
@@ -22,18 +26,38 @@ function Field({ label, value }: { label: string; value: string | null | undefin
   )
 }
 
+// US-048. Every transition is permitted, so the buttons offered are simply the two states the
+// customer is not currently in.
+const STATUS_ACTIONS: { status: AccountStatus; label: string; destructive: boolean }[] = [
+  { status: "ACTIVE", label: "Reactivate", destructive: false },
+  { status: "SUSPENDED", label: "Suspend", destructive: true },
+  { status: "LOCKED", label: "Lock", destructive: true },
+]
+
 type Props = {
   summary: CustomerSummary | null
   detail: CustomerDetail | null
   accounts: Account[] | null
   error: string | null
   onClose: () => void
+  onChangeStatus: (customerId: string, status: AccountStatus) => Promise<void>
 }
 
 // The detail half of screen 3: KYC data from US-054, accounts and balances from US-049.
 // The summary is passed alongside the detail so the header renders immediately on row click while
 // the two detail requests are still in flight.
-export function CustomerDetailDrawer({ summary, detail, accounts, error, onClose }: Props) {
+export function CustomerDetailDrawer({ summary, detail, accounts, error, onClose, onChangeStatus }: Props) {
+  const [pendingStatus, setPendingStatus] = useState<AccountStatus | null>(null)
+
+  async function applyStatus(customerId: string, status: AccountStatus) {
+    setPendingStatus(status)
+    try {
+      await onChangeStatus(customerId, status)
+    } finally {
+      setPendingStatus(null)
+    }
+  }
+
   return (
     <Sheet open={summary !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
@@ -55,6 +79,27 @@ export function CustomerDetailDrawer({ summary, detail, accounts, error, onClose
               </div>
 
               {error && <p className="text-sm text-destructive">{error}</p>}
+
+              <section className="flex flex-col gap-2">
+                <h3 className="text-sm font-medium">Account status</h3>
+                <div className="flex flex-wrap gap-2">
+                  {STATUS_ACTIONS.filter((action) => action.status !== summary.status).map((action) => (
+                    <Button
+                      key={action.status}
+                      size="sm"
+                      variant={action.destructive ? "destructive" : "default"}
+                      disabled={pendingStatus !== null}
+                      onClick={() => applyStatus(summary.id, action.status)}
+                    >
+                      {pendingStatus === action.status ? "Working…" : action.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  A suspended or locked customer cannot sign in. An active session ends within 15
+                  minutes, when its access token expires.
+                </p>
+              </section>
 
               <section className="flex flex-col gap-3">
                 <h3 className="text-sm font-medium">Identity (KYC)</h3>

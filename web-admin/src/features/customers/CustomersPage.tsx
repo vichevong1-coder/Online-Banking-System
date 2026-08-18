@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { Search } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { DataTable, type Column } from "@/components/ui/data-table"
@@ -10,7 +11,9 @@ import {
   getCustomer,
   getCustomerAccounts,
   searchCustomers,
+  updateCustomerStatus,
   type Account,
+  type AccountStatus,
   type CustomerDetail,
   type CustomerSummary,
 } from "@/features/customers/api"
@@ -90,6 +93,28 @@ export function CustomersPage() {
           setAccounts(customerAccounts)
         })
         .catch(() => setDetailError("Couldn't load this customer's details."))
+    },
+    [accessToken],
+  )
+
+  // US-048. The response is the server's updated view, so the row, the drawer header and the detail
+  // are all refreshed from it rather than assuming the write landed as sent.
+  const changeStatus = useCallback(
+    async (customerId: string, status: AccountStatus) => {
+      if (!accessToken) return
+      try {
+        const updated = await updateCustomerStatus(accessToken, customerId, status)
+        setDetail(updated)
+        setSelected((current) => (current?.id === customerId ? { ...current, status: updated.status } : current))
+        setCustomers((current) =>
+          current.map((customer) =>
+            customer.id === customerId ? { ...customer, status: updated.status } : customer,
+          ),
+        )
+        toast.success(`${updated.firstName} ${updated.lastName} is now ${updated.status.toLowerCase()}.`)
+      } catch {
+        toast.error("Couldn't update this customer's status.")
+      }
     },
     [accessToken],
   )
@@ -184,6 +209,7 @@ export function CustomersPage() {
         accounts={accounts}
         error={detailError}
         onClose={() => setSelected(null)}
+        onChangeStatus={changeStatus}
       />
     </div>
   )

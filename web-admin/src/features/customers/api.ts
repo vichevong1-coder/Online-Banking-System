@@ -75,6 +75,26 @@ export function getCustomerAccounts(accessToken: string, customerId: string) {
   return authGet<Account[]>(`/admin/customers/${customerId}/accounts`, accessToken)
 }
 
+// US-048. Returns the updated customer so the caller can refresh the row and the drawer from the
+// server's view rather than assuming the write landed as sent.
+export async function updateCustomerStatus(
+  accessToken: string,
+  customerId: string,
+  status: AccountStatus,
+): Promise<CustomerDetail> {
+  const response = await fetch(`${API_BASE_URL}/admin/customers/${customerId}/status`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  })
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    throw new ApiError(response.status, payload?.error ?? "UNKNOWN_ERROR")
+  }
+  return response.json() as Promise<CustomerDetail>
+}
+
 // Riel is conventionally written without decimal places, but Intl defaults KHR to two (it returns
 // "KHR 5,000,000.00"), so the fraction digits are overridden rather than left to the currency code.
 // USD keeps its two. Both accounts of a multi-currency customer sit in one list, so they have to

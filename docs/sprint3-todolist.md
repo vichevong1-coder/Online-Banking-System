@@ -35,7 +35,7 @@ Neither exists today; both block a screen in this sprint.
 
 - [ ] `login_attempts` table + record every failed login — US-053's failed-login tile has no data
       source without it, and US-058's lockout policy (Sprint 6) reuses the same counter
-- [ ] Account status **mutation** — `AccountStatusPolicy` only *reads* status today; nothing writes it (US-048)
+- [x] Account status **mutation** — `PATCH /admin/customers/{userId}/status`; `AccountStatusPolicy` still owns the login-side rule (US-048)
 
 ## API endpoints (`backend/`)
 
@@ -46,7 +46,7 @@ that a `CUSTOMER` token gets `403`.
 - [x] `GET /admin/customers` — searchable, paginated customer list (US-054)
 - [x] `GET /admin/customers/{userId}` — customer detail (US-054)
 - [x] `GET /admin/customers/{userId}/accounts` — that customer's accounts + balances (US-049)
-- [ ] `PATCH /admin/customers/{userId}/status` — suspend / lock / reactivate (US-048)
+- [x] `PATCH /admin/customers/{userId}/status` — suspend / lock / reactivate (US-048)
 - [ ] `GET /admin/staff` — list staff accounts (US-047)
 - [ ] `POST /admin/staff` — create a staff account (US-047) — replaces the bootstrap-admin seed as the way staff come into existence
 - [ ] `PATCH /admin/staff/{userId}/role` — assign one `Role` value (US-047)
@@ -59,7 +59,7 @@ Screens 0 (app shell) and 1 (login + 2FA) already exist from Sprint 1.
 - [ ] KPI home — screen 2 (US-053)
 - [x] Customers table with search — screen 3 (US-054)
 - [x] Customer detail drawer: accounts + balances — screen 3 (US-049)
-- [ ] Suspend / lock / reactivate actions in the drawer — screen 3 (US-048)
+- [x] Suspend / lock / reactivate actions in the drawer — screen 3 (US-048)
 - [ ] Roles screen: staff list, create staff, assign role — screen 5 (US-047)
 - [ ] Admin settings: change own password (US-046)
 

@@ -65,6 +65,9 @@ const CUSTOMER_ACCOUNTS = [
   },
 ]
 
+// sonner renders toasts into a portal that isn't mounted here; the calls are asserted directly.
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+
 function jsonResponse(body: unknown) {
   return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) } as Response)
 }
@@ -111,10 +114,51 @@ test("opening a customer shows their KYC data and accounts with formatted balanc
 
   expect(await screen.findByText("900000000004")).toBeInTheDocument()
   expect(screen.getByText("900000000005")).toBeInTheDocument()
-  // USD renders with two decimals, KHR with none — Intl drives both off the currency code.
+  // USD keeps two decimals; KHR is forced to none, since Intl would otherwise give "KHR 5,000,000.00".
   expect(screen.getByText("$550.00")).toBeInTheDocument()
   expect(screen.getByText("KHR 5,000,000")).toBeInTheDocument()
   expect(screen.getByText("034567890")).toBeInTheDocument()
+})
+
+// US-048
+test("suspending a customer updates the drawer and the table row", async () => {
+  const user = userEvent.setup()
+  vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    if (init?.method === "PATCH") {
+      return jsonResponse({ ...CUSTOMER_DETAIL, status: "SUSPENDED" })
+    }
+    if (url.includes("/accounts")) return jsonResponse(CUSTOMER_ACCOUNTS)
+    if (/\/admin\/customers\/[0-9a-f-]+$/.test(url)) return jsonResponse(CUSTOMER_DETAIL)
+    return jsonResponse(CUSTOMER_PAGE)
+  })
+
+  render(<CustomersPage />)
+  await user.click(await screen.findByText("Nita Pich"))
+  await screen.findByText("900000000004")
+
+  // An ACTIVE customer is offered Suspend and Lock, never Reactivate.
+  expect(screen.queryByRole("button", { name: "Reactivate" })).not.toBeInTheDocument()
+  await user.click(screen.getByRole("button", { name: "Suspend" }))
+
+  await waitFor(() => {
+    const patched = vi.mocked(fetch).mock.calls.find(([, init]) => init?.method === "PATCH")
+    expect(patched).toBeDefined()
+    expect(String(patched?.[1]?.body)).toContain("SUSPENDED")
+  })
+  // Vibol was already suspended, so after this there are two suspended badges: the updated row
+  // and the drawer header.
+  await waitFor(() => expect(screen.getAllByText("suspended").length).toBe(3))
+})
+
+test("a suspended customer is offered Reactivate", async () => {
+  const user = userEvent.setup()
+  render(<CustomersPage />)
+
+  await user.click(await screen.findByText("Vibol Keo"))
+
+  expect(await screen.findByRole("button", { name: "Reactivate" })).toBeInTheDocument()
+  expect(screen.queryByRole("button", { name: "Suspend" })).not.toBeInTheDocument()
 })
 
 test("search narrows the request sent to the backend", async () => {
