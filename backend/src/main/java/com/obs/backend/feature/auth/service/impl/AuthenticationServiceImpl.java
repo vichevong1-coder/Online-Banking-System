@@ -14,6 +14,7 @@ import com.obs.backend.feature.auth.exception.InvalidLoginIdentifierException;
 import com.obs.backend.feature.auth.exception.InvalidRefreshTokenException;
 import com.obs.backend.feature.auth.exception.PhoneNotVerifiedException;
 import com.obs.backend.feature.auth.service.AuthenticationService;
+import com.obs.backend.feature.auth.service.LoginAttemptService;
 import com.obs.backend.feature.auth.service.OtpService;
 import com.obs.backend.feature.user.entity.User;
 import com.obs.backend.feature.user.repository.UserRepository;
@@ -36,36 +37,50 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final AccountStatusPolicy accountStatusPolicy;
     private final OtpService otpService;
     private final JwtService jwtService;
+    private final LoginAttemptService loginAttemptService;
 
     public AuthenticationServiceImpl(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             AccountStatusPolicy accountStatusPolicy,
             OtpService otpService,
-            JwtService jwtService) {
+            JwtService jwtService,
+            LoginAttemptService loginAttemptService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.accountStatusPolicy = accountStatusPolicy;
         this.otpService = otpService;
         this.jwtService = jwtService;
+        this.loginAttemptService = loginAttemptService;
     }
 
     @Override
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        User user = findByIdentifier(request.email(), request.phone());
+        String identifier = StringUtils.hasText(request.email())
+                ? request.email().trim()
+                : (StringUtils.hasText(request.phone()) ? request.phone().trim() : "unknown");
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new InvalidCredentialsException();
-        }
-        accountStatusPolicy.checkLoginAllowed(user.getStatus());
-        if (user.getRole() == Role.CUSTOMER && !user.isPhoneVerified()) {
-            throw new PhoneNotVerifiedException();
-        }
+        try {
+            User user = findByIdentifier(request.email(), request.phone());
 
-        otpService.generateAndSend(user, OtpPurpose.LOGIN);
-        String challengeToken = jwtService.generateChallengeToken(user.getId().toString());
-        return new LoginResponse(challengeToken);
+            if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+                loginAttemptService.recordAttempt(identifier, false, null, null);
+                throw new InvalidCredentialsException();
+            }
+            accountStatusPolicy.checkLoginAllowed(user.getStatus());
+            if (user.getRole() == Role.CUSTOMER && !user.isPhoneVerified()) {
+                loginAttemptService.recordAttempt(identifier, false, null, null);
+                throw new PhoneNotVerifiedException();
+            }
+
+            otpService.generateAndSend(user, OtpPurpose.LOGIN);
+            String challengeToken = jwtService.generateChallengeToken(user.getId().toString());
+            return new LoginResponse(challengeToken);
+        } catch (RuntimeException e) {
+            loginAttemptService.recordAttempt(identifier, false, null, null);
+            throw e;
+        }
     }
 
     @Override

@@ -53,6 +53,23 @@ public class Account {
         this.balance = balance;
     }
 
+    public void credit(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Credit amount must be positive");
+        }
+        this.balance = this.balance.add(amount);
+    }
+
+    public void debit(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Debit amount must be positive");
+        }
+        if (this.balance.compareTo(amount) < 0) {
+            throw new IllegalStateException("Insufficient funds");
+        }
+        this.balance = this.balance.subtract(amount);
+    }
+
     public UUID getId() {
         return id;
     }

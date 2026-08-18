@@ -98,8 +98,49 @@ public class User {
         this.phoneVerified = phoneVerified;
     }
 
+    public static User createStaff(
+            String firstName,
+            String lastName,
+            String email,
+            String phone,
+            String passwordHash,
+            Role role) {
+        User user = new User(
+                firstName,
+                lastName,
+                passwordHash,
+                null,
+                null,
+                null,
+                null,
+                phone,
+                role,
+                AccountStatus.ACTIVE,
+                true);
+        user.email = email;
+        return user;
+    }
+
     public void markPhoneVerified() {
         this.phoneVerified = true;
+    }
+
+    /**
+     * Moves the account between ACTIVE / SUSPENDED / LOCKED (US-048). Takes the target state rather
+     * than exposing suspend()/lock()/reactivate() because the admin action names the state it wants
+     * and every transition is permitted — there is no state machine to enforce here. Whether the
+     * status permits login stays in {@link com.obs.backend.security.AccountStatusPolicy}.
+     */
+    public void changeStatus(AccountStatus newStatus) {
+        this.status = newStatus;
+    }
+
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+    }
+
+    public void changeRole(Role newRole) {
+        this.role = newRole;
     }
 
     public UUID getId() {

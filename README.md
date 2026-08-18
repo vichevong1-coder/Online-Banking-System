@@ -31,7 +31,8 @@ docker compose down -v      # stop and wipe the database
 | Postgres | `localhost:5432` — db/user/password all `obs` | Application database |
 | Mailpit SMTP | `localhost:1025` | Where the backend sends mail |
 | **Mailpit inbox** | **http://localhost:8025** | **Read OTP and statement emails here** |
-
+| - Swagger UI: http://localhost:8080/swagger-ui.html (redirects to /swagger-ui/index.html)
+| - Raw OpenAPI spec (JSON): http://localhost:8080/v3/api-docs
 Credentials match `.github/workflows/backend-ci.yml` so local runs and CI behave the same. Override
 them by copying `.env.example` to `.env` at the repo root.
 

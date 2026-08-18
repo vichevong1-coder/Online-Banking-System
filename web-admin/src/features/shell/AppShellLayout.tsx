@@ -1,5 +1,5 @@
-import { Outlet } from "react-router"
-import { LayoutDashboard, Landmark, LogOut } from "lucide-react"
+import { Link, Outlet, useLocation } from "react-router"
+import { LayoutDashboard, Landmark, LogOut, Settings, ShieldCheck, Users } from "lucide-react"
 
 import {
   Sidebar,
@@ -20,17 +20,23 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/features/auth/auth-context"
 
-// Screen 0 from the sprint plan's screen inventory (US-002). Only "Overview"
-// is linked for now — the rest of the screen inventory (customers,
-// transaction monitor, roles, bill providers, audit log) is Sprint 5 work
-// against APIs that don't exist yet.
+const NAV_ITEMS = [
+  { to: "/", label: "Overview", icon: LayoutDashboard },
+  { to: "/customers", label: "Customers", icon: Users },
+  { to: "/roles", label: "Roles & Staff", icon: ShieldCheck },
+  { to: "/settings", label: "Settings", icon: Settings },
+]
+
 export function AppShellLayout() {
   const { email, signOut } = useAuth()
+  const { pathname } = useLocation()
+  const activeItem = NAV_ITEMS.find((item) => item.to === pathname)
 
   return (
     <SidebarProvider>
@@ -45,12 +51,16 @@ export function AppShellLayout() {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton isActive>
-                    <LayoutDashboard />
-                    <span>Overview</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {NAV_ITEMS.map((item) => (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton asChild isActive={pathname === item.to}>
+                      <Link to={item.to}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -66,8 +76,15 @@ export function AppShellLayout() {
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link to="/settings" className="flex items-center gap-2">
+                  <Settings className="size-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={signOut}>
-                <LogOut />
+                <LogOut className="size-4" />
                 Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -79,7 +96,7 @@ export function AppShellLayout() {
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
-          <h1 className="text-sm font-medium">Overview</h1>
+          <h1 className="text-sm font-medium">{activeItem?.label ?? "Admin"}</h1>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">
           <Outlet />
