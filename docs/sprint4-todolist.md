@@ -60,12 +60,12 @@ customer's account ID returns `404 ACCOUNT_NOT_FOUND`, not `403`, so IDs can't p
 
 ### Transfers (US-025–US-028)
 
-- [ ] `POST /transfers` — between own accounts (US-025)
-- [ ] `POST /transfers/external` — to another bank, simulated (US-026)
-- [ ] Limits & validation rules — daily cap, per-transfer cap, insufficient funds,
+- [x] `POST /transfers` — between own accounts (US-025)
+- [x] `POST /transfers/external` — to another bank, simulated (US-026)
+- [x] Limits & validation rules — daily cap, per-transfer cap, insufficient funds,
       `400 CURRENCY_MISMATCH` (US-027)
-- [ ] `GET /transfers/{transferId}` — confirmation & receipt payload (US-028)
-- [ ] `GET /transfers` — the caller's own transfer history (US-028)
+- [x] `GET /transfers/{transferId}` — confirmation & receipt payload (US-028)
+- [x] `GET /transfers` — the caller's own transfer history (US-028)
 
 ### Beneficiaries (US-029, US-030)
 
@@ -96,7 +96,7 @@ gets `403`, same as every Sprint 3 admin endpoint.
 
 ### Notifications (US-035)
 
-- [ ] Transfer notifications hooked to the transfer service (US-035) — attaches to the existing
+- [x] Transfer notifications hooked to the transfer service (US-035) — attaches to the existing
       `NotificationService` / `NotificationSender` seam built in Sprint 3, does **not** invent its
       own path
 

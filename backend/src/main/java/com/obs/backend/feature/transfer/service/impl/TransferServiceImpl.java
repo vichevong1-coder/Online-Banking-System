@@ -11,6 +11,7 @@ import com.obs.backend.feature.notification.entity.NotificationType;
 import com.obs.backend.feature.notification.service.NotificationService;
 import com.obs.backend.feature.transfer.config.TransferLimitProperties;
 import com.obs.backend.feature.transfer.config.TransferLimitProperties.CurrencyLimits;
+import com.obs.backend.feature.transfer.dto.CreateExternalTransferRequest;
 import com.obs.backend.feature.transfer.dto.CreateTransferRequest;
 import com.obs.backend.feature.transfer.dto.TransferResponse;
 import com.obs.backend.feature.transfer.entity.Transfer;
@@ -35,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -42,6 +45,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TransferServiceImpl implements TransferService {
+
+    private static final Logger log = LoggerFactory.getLogger(TransferServiceImpl.class);
 
     /** Amounts are stored as NUMERIC(19,4); everything is normalised to that scale before comparison. */
     private static final int AMOUNT_SCALE = 4;
@@ -51,6 +56,9 @@ public class TransferServiceImpl implements TransferService {
     // Crockford-ish: no I, L, O, U, so a reference read aloud off a receipt can't
     // be confused with 1 / 0.
     private static final String REFERENCE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+    /** US-026: how a destination held at another bank is written into transfers.external_ref. */
+    private static final String EXTERNAL_REF_FORMAT = "%s:%s";
 
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
@@ -150,20 +158,99 @@ public class TransferServiceImpl implements TransferService {
                 destination.getBalance(),
                 transfer.getId()));
 
-        // US-035 seam: the shared NotificationService, not a parallel path.
-        notificationService.sendNotification(
+        notifyTransferCompleted(
                 userId,
-                "Transfer completed",
                 "%s %s moved from account %s to account %s. Reference %s."
                         .formatted(
                                 source.getCurrency(),
                                 amount.toPlainString(),
                                 source.getAccountNumber(),
                                 destination.getAccountNumber(),
-                                transfer.getReference()),
-                NotificationType.TRANSFER);
+                                transfer.getReference()));
 
         return transferMapper.toResponse(transfer, source.getAccountNumber(), destination.getAccountNumber());
+    }
+
+    /**
+     * US-026. Interbank, simulated: there is no clearing integration, so the
+     * transfer is settled deterministically in-process — accepted, debited, and
+     * marked COMPLETED before the method returns. Only the debit leg is written,
+     * because the destination account is not ours to credit; that is exactly what
+     * {@code transfers.to_account_id NULL} plus {@code external_ref} are for.
+     *
+     * <p>Every US-027 rule still applies. Currency is the one that differs: with
+     * no local destination there is nothing to compare against, so the check
+     * becomes "the currency the caller declared must be the source account's" —
+     * still a refusal to convert, still {@code 400 CURRENCY_MISMATCH}.
+     */
+    @Override
+    @Transactional
+    public TransferResponse transferExternal(UUID userId, CreateExternalTransferRequest request) {
+        // 404 for an account that isn't the caller's, same as US-025.
+        Account source = findOwnedAccount(userId, request.fromAccountId());
+
+        if (source.getCurrency() != request.currency()) {
+            throw new CurrencyMismatchException();
+        }
+
+        BigDecimal amount = request.amount().setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
+        CurrencyLimits limits = transferLimits.forCurrency(source.getCurrency());
+
+        if (amount.compareTo(limits.getPerTransfer()) > 0) {
+            throw TransferLimitExceededException.perTransfer(limits.getPerTransfer());
+        }
+        BigDecimal sentToday = sumSentToday(userId, source);
+        if (sentToday.add(amount).compareTo(limits.getDaily()) > 0) {
+            throw TransferLimitExceededException.daily(limits.getDaily());
+        }
+
+        if (source.getBalance().compareTo(amount) < 0) {
+            throw new InsufficientFundsException();
+        }
+
+        String externalRef =
+                EXTERNAL_REF_FORMAT.formatted(request.beneficiaryBankCode(), request.beneficiaryAccountNumber());
+        // Born PENDING — it is only accepted at this point — then settled below.
+        // saveAndFlush for the same reasons as US-025: createdAt and the leg's FK.
+        Transfer transfer = Transfer.external(
+                source.getId(),
+                externalRef,
+                amount,
+                source.getCurrency(),
+                generateReference(),
+                request.description());
+        transfer = transferRepository.saveAndFlush(transfer);
+
+        source.debit(amount);
+        accountRepository.save(source);
+
+        transactionRepository.save(new Transaction(
+                source.getId(),
+                TransactionType.TRANSFER_OUT,
+                amount,
+                source.getCurrency(),
+                request.description(),
+                source.getBalance(),
+                transfer.getId()));
+
+        // The simulated settlement response. A real integration would leave the
+        // row PENDING and complete it on a callback; this is the seam where that
+        // would go. Settling here also keeps the transfer inside the US-027 daily
+        // cap, which sums COMPLETED rows only.
+        transfer.markCompleted();
+
+        notifyTransferCompleted(
+                userId,
+                "%s %s sent from account %s to %s at bank %s. Reference %s."
+                        .formatted(
+                                source.getCurrency(),
+                                amount.toPlainString(),
+                                source.getAccountNumber(),
+                                request.beneficiaryAccountNumber(),
+                                request.beneficiaryBankCode(),
+                                transfer.getReference()));
+
+        return transferMapper.toResponse(transfer, source.getAccountNumber(), null);
     }
 
     @Override
@@ -195,6 +282,22 @@ public class TransferServiceImpl implements TransferService {
                 ownedAccountIds, ownedAccountIds, pageable);
         Map<UUID, String> accountNumbers = accountNumbersFor(page.getContent());
         return PageResponse.of(page.map(transfer -> toResponse(transfer, accountNumbers)));
+    }
+
+    /**
+     * US-035, for both the internal (US-025) and interbank (US-026) paths: the
+     * shared Sprint 3 NotificationService, not a parallel path of its own.
+     *
+     * <p>Swallowed and logged rather than propagated — the money has already
+     * moved by the time this runs, and failing the transfer because the customer
+     * could not be told about it would be the worse outcome of the two.
+     */
+    private void notifyTransferCompleted(UUID userId, String message) {
+        try {
+            notificationService.sendNotification(userId, "Transfer completed", message, NotificationType.TRANSFER);
+        } catch (RuntimeException e) {
+            log.warn("Transfer completed but its notification could not be sent for user {}", userId, e);
+        }
     }
 
     private BigDecimal sumSentToday(UUID userId, Account source) {

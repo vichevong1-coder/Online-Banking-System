@@ -21,6 +21,7 @@ public class TransferMapper {
                 fromAccountNumber,
                 transfer.getToAccountId(),
                 toAccountNumber,
+                transfer.getExternalRef(),
                 transfer.getAmount(),
                 transfer.getCurrency(),
                 transfer.getStatus(),

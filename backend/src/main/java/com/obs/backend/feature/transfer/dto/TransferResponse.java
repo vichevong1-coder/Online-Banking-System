@@ -14,6 +14,9 @@ public record TransferResponse(
         String fromAccountNumber,
         UUID toAccountId,
         String toAccountNumber,
+        // US-026: "BANKCODE:ACCOUNTNUMBER" at the receiving bank. Null for an
+        // internal transfer, which names its destination with the two fields above.
+        String externalRef,
         BigDecimal amount,
         Currency currency,
         TransferStatus status,
