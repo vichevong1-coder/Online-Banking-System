@@ -23,7 +23,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [x] Login page (US-010) — email-based (admin is the only role with an email; phone is admin-only too, but just for SMS 2FA delivery, not sign-in); wired to `/auth/login`
 - [x] 2FA challenge screen (US-012) — wired to `/auth/2fa/verify`, with countdown (decoded from the challenge token's JWT `exp`) + resend wired to `/auth/2fa/resend`
 - [x] App shell — sidebar, header, protected routes — real session state (access token + user); survives a page refresh via sessionStorage (refresh token + user profile only, not the access token) and a silent `/auth/refresh` call on load
-h
+
 ## Mobile pages (`mobile/`)
 
 - [x] Project setup & design system (US-003)
