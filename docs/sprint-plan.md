@@ -258,7 +258,7 @@ the mobile screens for these flows follow in Sprint 5.
 - **US-027 must add optimistic locking on `accounts.balance`.** The `Account` entity has no `@Version` field and nothing takes a row lock, so two concurrent debits read the same balance and both write their own result — a lost update that lets the demo create money. Acceptance criteria: a `@Version` column plus migration, a `409` (or a bounded retry) on `OptimisticLockingFailureException`, and a test that fires two simultaneous transfers at one account and proves it cannot overdraw.
 - **Cross-currency transfers are rejected, not converted.** `accounts.currency` exists and US-016 shows per-currency balances, but there is no rate table and no conversion service, and building an FX engine is out of budget for a 12-week solo project. Decision: US-027 rejects a transfer whose source and destination currencies differ with `400 CURRENCY_MISMATCH`; customers move money between same-currency accounts only. Multi-currency stays a display feature. US-053's volume KPI is therefore reported in a single declared display currency — name it in that story.
 - **US-027 carries the transfer-protection story on its own** now that US-040 is cut. It is a hard block: over-limit transfers are rejected with a `400`, not flagged.
-- **US-034 still needs a written spec before it starts.** Minimum viable: seed three demo merchants; scanning a merchant QR settles instantly; one seeded merchant always declines so the failure path is demoable.
+- **US-034's spec is written** — see [`qr-payments-spec.md`](./qr-payments-spec.md), which covers US-032/US-033/US-034 together because the payload format is shared. Three seeded demo merchants, instant settlement, and one merchant that always declines so the failure path is demoable.
 - **The QR schedule risk moved to Sprint 5 with the mobile half.** Generating and parsing QR payloads is backend work and lands here; *scanning* with a physical device camera (US-033) is the part most likely to eat an unplanned day, and that now sits in Sprint 5. Keep the payload format simple enough that the mobile half is genuinely just a camera plus a POST.
 
 ### Deliverable
@@ -392,7 +392,6 @@ The architecture splits across three layers: a Java / Spring Boot REST API as th
 
 ## Still to be written
 
-- **US-034 merchant QR spec** — seeded merchants, settlement behaviour, failure path.
 - **Notifications architecture note** — one `NotificationService` shared by US-022, US-023, US-035 and US-060, written before Sprint 2 starts.
 - **SMS provider choice for US-060** — no vendor picked yet for the live swap behind `OtpSender` (Twilio or similar); needed before Sprint 6 planning.
 - **US-020 email-address source** — statement email now has no KYC-collected email to send to, since registration dropped the email field. Needs a decision before Sprint 2: collect email separately (e.g. optional profile field) or drop US-020's email delivery. Whichever way it lands also decides whether `spring.mail.*` gets configured and whether Mailpit stays in `docker-compose.yml`.

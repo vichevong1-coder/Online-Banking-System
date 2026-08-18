@@ -19,9 +19,10 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
       < backend/src/main/resources/db/demo/seed_demo_data.sql
   ```
   Credentials for the seeded accounts are in `.claude/demo-admin.md` and `.claude/demo-customers.md`.
-- **Write the US-034 merchant QR spec.** Still listed under "Still to be written" in sprint-plan.md.
-  Minimum viable: seed three demo merchants; scanning a merchant QR settles instantly; one seeded
-  merchant always declines so the failure path is demoable. **US-034 cannot start until this exists.**
+- [x] **Write the US-034 merchant QR spec.** Done — [`qr-payments-spec.md`](./qr-payments-spec.md)
+  covers US-032, US-033 and US-034 together, since they share one payload format and one
+  `POST /qr/pay` endpoint. Read it before starting any QR work; it fixes the payload grammar, the
+  `merchants` table, the three seeded merchants and the decline path.
 - **Extend the demo seed with beneficiaries and a few transfers** once the tables land, or US-050's
   feed and US-053's tiles both render empty on a fresh database.
 
@@ -81,8 +82,8 @@ on the beneficiary row is the cheapest way to support it, add the column here �
 
 - [ ] `GET /qr/me` — generate the caller's personal QR payload (US-032)
 - [ ] `POST /qr/pay` — resolve a scanned payload and settle it (US-033)
-- [ ] Merchant payment path + seeded demo merchants, one always declining (US-034) — blocked on the
-      spec above
+- [ ] Merchant payment path + seeded demo merchants, one always declining (US-034) — unblocked;
+      spec'd in [`qr-payments-spec.md`](./qr-payments-spec.md)
 
 **Keep the QR payload format simple** — the Sprint 5 mobile half should be genuinely just a camera
 plus a POST. The scanning risk moved to Sprint 5; the payload work is here.
