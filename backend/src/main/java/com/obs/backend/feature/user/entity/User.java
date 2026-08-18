@@ -98,6 +98,29 @@ public class User {
         this.phoneVerified = phoneVerified;
     }
 
+    public static User createStaff(
+            String firstName,
+            String lastName,
+            String email,
+            String phone,
+            String passwordHash,
+            Role role) {
+        User user = new User(
+                firstName,
+                lastName,
+                passwordHash,
+                null,
+                null,
+                null,
+                null,
+                phone,
+                role,
+                AccountStatus.ACTIVE,
+                true);
+        user.email = email;
+        return user;
+    }
+
     public void markPhoneVerified() {
         this.phoneVerified = true;
     }
@@ -110,6 +133,14 @@ public class User {
      */
     public void changeStatus(AccountStatus newStatus) {
         this.status = newStatus;
+    }
+
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+    }
+
+    public void changeRole(Role newRole) {
+        this.role = newRole;
     }
 
     public UUID getId() {
