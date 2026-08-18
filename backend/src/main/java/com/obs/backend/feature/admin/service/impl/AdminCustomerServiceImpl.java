@@ -6,6 +6,7 @@ import com.obs.backend.feature.account.mapper.AccountMapper;
 import com.obs.backend.feature.account.repository.AccountRepository;
 import com.obs.backend.feature.admin.dto.CustomerDetailResponse;
 import com.obs.backend.feature.admin.dto.CustomerSummaryResponse;
+import com.obs.backend.feature.admin.dto.UpdateCustomerStatusRequest;
 import com.obs.backend.feature.admin.exception.CustomerNotFoundException;
 import com.obs.backend.feature.admin.mapper.AdminCustomerMapper;
 import com.obs.backend.feature.admin.service.AdminCustomerService;
@@ -62,6 +63,17 @@ public class AdminCustomerServiceImpl implements AdminCustomerService {
         return accountRepository.findByUserIdOrderByCreatedAtAsc(customer.getId()).stream()
                 .map(accountMapper::toResponse)
                 .toList();
+    }
+
+    // Overrides the class-level readOnly=true. Suspending does not terminate a live session
+    // immediately: /auth/refresh re-runs AccountStatusPolicy, so access ends within one access-token
+    // lifetime (<=15 min) rather than instantly. Revocation is tracked as hole H9 in architecture.md.
+    @Override
+    @Transactional
+    public CustomerDetailResponse updateStatus(UUID customerId, UpdateCustomerStatusRequest request) {
+        User customer = requireCustomer(customerId);
+        customer.changeStatus(request.status());
+        return customerMapper.toDetail(customer);
     }
 
     private User requireCustomer(UUID customerId) {

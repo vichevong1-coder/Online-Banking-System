@@ -102,6 +102,16 @@ public class User {
         this.phoneVerified = true;
     }
 
+    /**
+     * Moves the account between ACTIVE / SUSPENDED / LOCKED (US-048). Takes the target state rather
+     * than exposing suspend()/lock()/reactivate() because the admin action names the state it wants
+     * and every transition is permitted — there is no state machine to enforce here. Whether the
+     * status permits login stays in {@link com.obs.backend.security.AccountStatusPolicy}.
+     */
+    public void changeStatus(AccountStatus newStatus) {
+        this.status = newStatus;
+    }
+
     public UUID getId() {
         return id;
     }
