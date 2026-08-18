@@ -7,9 +7,12 @@
 # Postgres credentials match .github/workflows/backend-ci.yml so that local runs
 # and CI behave identically. Override via a root .env file if you need to.
 #
-# Mailpit is the local mail server: the backend sends OTP and statement emails to
+# Mailpit is the local mail server: the backend sends statement emails (US-020) to
 # it over SMTP on 1025, and you read them in the web inbox at localhost:8025.
-# Nothing leaves your machine.
+# Nothing leaves your machine. OTPs do NOT use email — registration and login
+# codes go out over SMS via the OtpSender interface (a log-only stub in dev),
+# so Mailpit exists solely for US-020. If US-020's open email-address question
+# lands on "drop email delivery," this service leaves the file with it.
 
 name: obs
 
