@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from "react-router"
-import { LayoutDashboard, Landmark, LogOut, Users } from "lucide-react"
+import { LayoutDashboard, Landmark, LogOut, Settings, ShieldCheck, Users } from "lucide-react"
 
 import {
   Sidebar,
@@ -20,17 +20,17 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/features/auth/auth-context"
 
-// Screen 0 from the sprint plan's screen inventory (US-002). Customers (screen 3) landed in
-// Sprint 3; the KPI home, roles, transaction monitor, bill providers and audit log follow across
-// Sprints 3–6 as the APIs behind them are built.
 const NAV_ITEMS = [
   { to: "/", label: "Overview", icon: LayoutDashboard },
   { to: "/customers", label: "Customers", icon: Users },
+  { to: "/roles", label: "Roles & Staff", icon: ShieldCheck },
+  { to: "/settings", label: "Settings", icon: Settings },
 ]
 
 export function AppShellLayout() {
@@ -76,8 +76,15 @@ export function AppShellLayout() {
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link to="/settings" className="flex items-center gap-2">
+                  <Settings className="size-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={signOut}>
-                <LogOut />
+                <LogOut className="size-4" />
                 Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>
