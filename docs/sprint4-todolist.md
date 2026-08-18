@@ -69,10 +69,10 @@ customer's account ID returns `404 ACCOUNT_NOT_FOUND`, not `403`, so IDs can't p
 
 ### Beneficiaries (US-029, US-030)
 
-- [ ] `POST /beneficiaries` — add (US-029)
-- [ ] `GET /beneficiaries` — list (US-029)
-- [ ] `PATCH /beneficiaries/{id}` — edit (US-030)
-- [ ] `DELETE /beneficiaries/{id}` — delete (US-030)
+- [x] `POST /beneficiaries` — add (US-029)
+- [x] `GET /beneficiaries` — list (US-029)
+- [x] `PATCH /beneficiaries/{id}` — edit (US-030)
+- [x] `DELETE /beneficiaries/{id}` — delete (US-030)
 
 US-031 (favorites / quick transfer) is `[Flutter]`-only and ships in Sprint 5. If a `favorite` flag
 on the beneficiary row is the cheapest way to support it, add the column here — but no screen.
