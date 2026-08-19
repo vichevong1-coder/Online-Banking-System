@@ -80,9 +80,9 @@ on the beneficiary row is the cheapest way to support it, add the column here �
 
 ### QR payments (US-032–US-034)
 
-- [ ] `GET /qr/me` — generate the caller's personal QR payload (US-032)
-- [ ] `POST /qr/pay` — resolve a scanned payload and settle it (US-033)
-- [ ] Merchant payment path + seeded demo merchants, one always declining (US-034) — unblocked;
+- [x] `GET /qr/me` — generate the caller's personal QR payload (US-032)
+- [x] `POST /qr/pay` — resolve a scanned payload and settle it (US-033)
+- [x] Merchant payment path + seeded demo merchants, one always declining (US-034) — unblocked;
       spec'd in [`qr-payments-spec.md`](./qr-payments-spec.md)
 
 **Keep the QR payload format simple** — the Sprint 5 mobile half should be genuinely just a camera
@@ -93,7 +93,7 @@ plus a POST. The scanning risk moved to Sprint 5; the payload work is here.
 Admin-only and role-guarded — `@PreAuthorize` on `ADMIN`, verified by a test that a `CUSTOMER` token
 gets `403`, same as every Sprint 3 admin endpoint.
 
-- [ ] `GET /admin/transfers` — filterable transfer feed: date range, amount, status, account (US-050)
+- [x] `GET /admin/transfers` — filterable transfer feed: date range, amount, status, account (US-050)
 
 ### Notifications (US-035)
 

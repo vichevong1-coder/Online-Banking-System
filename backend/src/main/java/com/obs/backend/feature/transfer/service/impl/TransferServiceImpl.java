@@ -7,37 +7,25 @@ import com.obs.backend.feature.account.entity.TransactionType;
 import com.obs.backend.feature.account.exception.AccountNotFoundException;
 import com.obs.backend.feature.account.repository.AccountRepository;
 import com.obs.backend.feature.account.repository.TransactionRepository;
-import com.obs.backend.feature.notification.entity.NotificationType;
-import com.obs.backend.feature.notification.service.NotificationService;
-import com.obs.backend.feature.transfer.config.TransferLimitProperties;
-import com.obs.backend.feature.transfer.config.TransferLimitProperties.CurrencyLimits;
 import com.obs.backend.feature.transfer.dto.CreateExternalTransferRequest;
 import com.obs.backend.feature.transfer.dto.CreateTransferRequest;
 import com.obs.backend.feature.transfer.dto.TransferResponse;
 import com.obs.backend.feature.transfer.entity.Transfer;
-import com.obs.backend.feature.transfer.entity.TransferStatus;
 import com.obs.backend.feature.transfer.exception.CurrencyMismatchException;
-import com.obs.backend.feature.transfer.exception.InsufficientFundsException;
 import com.obs.backend.feature.transfer.exception.SameAccountTransferException;
-import com.obs.backend.feature.transfer.exception.TransferLimitExceededException;
 import com.obs.backend.feature.transfer.exception.TransferNotFoundException;
 import com.obs.backend.feature.transfer.mapper.TransferMapper;
 import com.obs.backend.feature.transfer.repository.TransferRepository;
 import com.obs.backend.feature.transfer.service.TransferService;
+import com.obs.backend.feature.transfer.service.TransferSupport;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.security.SecureRandom;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -46,16 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TransferServiceImpl implements TransferService {
 
-    private static final Logger log = LoggerFactory.getLogger(TransferServiceImpl.class);
-
     /** Amounts are stored as NUMERIC(19,4); everything is normalised to that scale before comparison. */
     private static final int AMOUNT_SCALE = 4;
-
-    private static final String REFERENCE_PREFIX = "TRF-";
-    private static final int REFERENCE_BODY_LENGTH = 8;
-    // Crockford-ish: no I, L, O, U, so a reference read aloud off a receipt can't
-    // be confused with 1 / 0.
-    private static final String REFERENCE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
     /** US-026: how a destination held at another bank is written into transfers.external_ref. */
     private static final String EXTERNAL_REF_FORMAT = "%s:%s";
@@ -64,23 +44,19 @@ public class TransferServiceImpl implements TransferService {
     private final TransactionRepository transactionRepository;
     private final TransferRepository transferRepository;
     private final TransferMapper transferMapper;
-    private final NotificationService notificationService;
-    private final TransferLimitProperties transferLimits;
-    private final SecureRandom secureRandom = new SecureRandom();
+    private final TransferSupport transferSupport;
 
     public TransferServiceImpl(
             AccountRepository accountRepository,
             TransactionRepository transactionRepository,
             TransferRepository transferRepository,
             TransferMapper transferMapper,
-            NotificationService notificationService,
-            TransferLimitProperties transferLimits) {
+            TransferSupport transferSupport) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.transferRepository = transferRepository;
         this.transferMapper = transferMapper;
-        this.notificationService = notificationService;
-        this.transferLimits = transferLimits;
+        this.transferSupport = transferSupport;
     }
 
     /**
@@ -106,28 +82,16 @@ public class TransferServiceImpl implements TransferService {
         }
 
         BigDecimal amount = request.amount().setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
-        CurrencyLimits limits = transferLimits.forCurrency(source.getCurrency());
-
-        if (amount.compareTo(limits.getPerTransfer()) > 0) {
-            throw TransferLimitExceededException.perTransfer(limits.getPerTransfer());
-        }
-        BigDecimal sentToday = sumSentToday(userId, source);
-        if (sentToday.add(amount).compareTo(limits.getDaily()) > 0) {
-            throw TransferLimitExceededException.daily(limits.getDaily());
-        }
-
-        // Checked here rather than letting Account.debit() throw: its
-        // IllegalStateException would surface as a 500, and US-027 wants a 400.
-        if (source.getBalance().compareTo(amount) < 0) {
-            throw new InsufficientFundsException();
-        }
+        // US-027, shared with US-026 and the QR path so there is one set of caps
+        // and one place they are enforced.
+        transferSupport.checkLimitsAndFunds(userId, source, amount);
 
         Transfer transfer = Transfer.internal(
                 source.getId(),
                 destination.getId(),
                 amount,
                 source.getCurrency(),
-                generateReference(),
+                transferSupport.generateReference(),
                 request.description());
         // saveAndFlush, not save: createdAt is a @CreationTimestamp and is only
         // populated once Hibernate issues the INSERT, so the receipt returned
@@ -158,7 +122,7 @@ public class TransferServiceImpl implements TransferService {
                 destination.getBalance(),
                 transfer.getId()));
 
-        notifyTransferCompleted(
+        transferSupport.notifyTransferCompleted(
                 userId,
                 "%s %s moved from account %s to account %s. Reference %s."
                         .formatted(
@@ -194,19 +158,7 @@ public class TransferServiceImpl implements TransferService {
         }
 
         BigDecimal amount = request.amount().setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
-        CurrencyLimits limits = transferLimits.forCurrency(source.getCurrency());
-
-        if (amount.compareTo(limits.getPerTransfer()) > 0) {
-            throw TransferLimitExceededException.perTransfer(limits.getPerTransfer());
-        }
-        BigDecimal sentToday = sumSentToday(userId, source);
-        if (sentToday.add(amount).compareTo(limits.getDaily()) > 0) {
-            throw TransferLimitExceededException.daily(limits.getDaily());
-        }
-
-        if (source.getBalance().compareTo(amount) < 0) {
-            throw new InsufficientFundsException();
-        }
+        transferSupport.checkLimitsAndFunds(userId, source, amount);
 
         String externalRef =
                 EXTERNAL_REF_FORMAT.formatted(request.beneficiaryBankCode(), request.beneficiaryAccountNumber());
@@ -217,7 +169,7 @@ public class TransferServiceImpl implements TransferService {
                 externalRef,
                 amount,
                 source.getCurrency(),
-                generateReference(),
+                transferSupport.generateReference(),
                 request.description());
         transfer = transferRepository.saveAndFlush(transfer);
 
@@ -239,7 +191,7 @@ public class TransferServiceImpl implements TransferService {
         // cap, which sums COMPLETED rows only.
         transfer.markCompleted();
 
-        notifyTransferCompleted(
+        transferSupport.notifyTransferCompleted(
                 userId,
                 "%s %s sent from account %s to %s at bank %s. Reference %s."
                         .formatted(
@@ -258,7 +210,7 @@ public class TransferServiceImpl implements TransferService {
     public TransferResponse getTransfer(UUID userId, UUID transferId) {
         Transfer transfer = transferRepository.findById(transferId).orElseThrow(TransferNotFoundException::new);
 
-        Set<UUID> ownedAccountIds = ownedAccountIds(userId);
+        Set<UUID> ownedAccountIds = transferSupport.ownedAccountIds(userId);
         boolean callersOwn = ownedAccountIds.contains(transfer.getFromAccountId())
                 || (transfer.getToAccountId() != null && ownedAccountIds.contains(transfer.getToAccountId()));
         if (!callersOwn) {
@@ -272,7 +224,7 @@ public class TransferServiceImpl implements TransferService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<TransferResponse> listTransfers(UUID userId, Pageable pageable) {
-        Set<UUID> ownedAccountIds = ownedAccountIds(userId);
+        Set<UUID> ownedAccountIds = transferSupport.ownedAccountIds(userId);
         if (ownedAccountIds.isEmpty()) {
             // An empty IN list is not valid SQL — short-circuit instead.
             return PageResponse.of(Page.<TransferResponse>empty(pageable));
@@ -282,43 +234,6 @@ public class TransferServiceImpl implements TransferService {
                 ownedAccountIds, ownedAccountIds, pageable);
         Map<UUID, String> accountNumbers = accountNumbersFor(page.getContent());
         return PageResponse.of(page.map(transfer -> toResponse(transfer, accountNumbers)));
-    }
-
-    /**
-     * US-035, for both the internal (US-025) and interbank (US-026) paths: the
-     * shared Sprint 3 NotificationService, not a parallel path of its own.
-     *
-     * <p>Swallowed and logged rather than propagated — the money has already
-     * moved by the time this runs, and failing the transfer because the customer
-     * could not be told about it would be the worse outcome of the two.
-     */
-    private void notifyTransferCompleted(UUID userId, String message) {
-        try {
-            notificationService.sendNotification(userId, "Transfer completed", message, NotificationType.TRANSFER);
-        } catch (RuntimeException e) {
-            log.warn("Transfer completed but its notification could not be sent for user {}", userId, e);
-        }
-    }
-
-    private BigDecimal sumSentToday(UUID userId, Account source) {
-        Instant startOfDay = LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toInstant();
-        Instant startOfNextDay = startOfDay.plus(java.time.Duration.ofDays(1));
-
-        BigDecimal sum = transferRepository.sumSentAmount(
-                ownedAccountIds(userId),
-                TransferStatus.COMPLETED,
-                source.getCurrency(),
-                startOfDay,
-                startOfNextDay);
-        return sum == null ? BigDecimal.ZERO : sum;
-    }
-
-    private Set<UUID> ownedAccountIds(UUID userId) {
-        Set<UUID> ids = new HashSet<>();
-        for (Account account : accountRepository.findByUserIdOrderByCreatedAtAsc(userId)) {
-            ids.add(account.getId());
-        }
-        return ids;
     }
 
     private Map<UUID, String> accountNumbersFor(List<Transfer> transfers) {
@@ -345,22 +260,5 @@ public class TransferServiceImpl implements TransferService {
 
     private Account findOwnedAccount(UUID userId, UUID accountId) {
         return accountRepository.findByIdAndUserId(accountId, userId).orElseThrow(AccountNotFoundException::new);
-    }
-
-    /**
-     * Short enough to read off a receipt or quote down a phone, random enough not
-     * to leak transfer volume the way a sequence would. The uniqueness check
-     * backs up the UNIQUE constraint on the column rather than replacing it.
-     */
-    private String generateReference() {
-        String candidate;
-        do {
-            StringBuilder body = new StringBuilder(REFERENCE_BODY_LENGTH);
-            for (int i = 0; i < REFERENCE_BODY_LENGTH; i++) {
-                body.append(REFERENCE_ALPHABET.charAt(secureRandom.nextInt(REFERENCE_ALPHABET.length())));
-            }
-            candidate = REFERENCE_PREFIX + body;
-        } while (transferRepository.existsByReference(candidate));
-        return candidate;
     }
 }

@@ -52,4 +52,40 @@ public interface TransferRepository extends JpaRepository<Transfer, UUID>, JpaSp
             @Param("currency") com.obs.backend.feature.account.entity.Currency currency,
             @Param("from") Instant from,
             @Param("toExclusive") Instant toExclusive);
+
+    /**
+     * US-053 dashboard overview KPI: count of today's completed transfers across
+     * the whole system.
+     */
+    @Query(
+            """
+            SELECT COUNT(t)
+            FROM Transfer t
+            WHERE t.status = :status
+              AND t.createdAt >= :from
+              AND t.createdAt < :toExclusive
+            """)
+    long countByStatusAndCreatedAtBetween(
+            @Param("status") TransferStatus status,
+            @Param("from") Instant from,
+            @Param("toExclusive") Instant toExclusive);
+
+    /**
+     * US-053 dashboard overview KPI: sum of today's completed transfer volume in USD.
+     */
+    @Query(
+            """
+            SELECT COALESCE(SUM(t.amount), 0)
+            FROM Transfer t
+            WHERE t.status = :status
+              AND t.currency = :currency
+              AND t.createdAt >= :from
+              AND t.createdAt < :toExclusive
+            """)
+    BigDecimal sumAmountByStatusAndCurrencyAndCreatedAtBetween(
+            @Param("status") TransferStatus status,
+            @Param("currency") com.obs.backend.feature.account.entity.Currency currency,
+            @Param("from") Instant from,
+            @Param("toExclusive") Instant toExclusive);
 }
+

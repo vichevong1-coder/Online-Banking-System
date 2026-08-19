@@ -29,8 +29,8 @@ This plan covers the original feature set minus the removals listed above, acros
 |---|---|---|---|
 | 1 | 1–2 | Authentication & Onboarding | **Done** |
 | 2 | 3–4 | Accounts & Balances | **Done except US-020, US-022, US-023** |
-| 3 | 5–6 | Admin Portal I — customers, KPIs, roles, status | In progress |
-| 4 | 7–8 | Money Movement (backend) & Transfer Monitoring | Not started |
+| 3 | 5–6 | Admin Portal I — customers, KPIs, roles, status | **Done** |
+| 4 | 7–8 | Money Movement (backend) & Transfer Monitoring | **Done except US-020** |
 | 5 | 9–10 | Bills & Cards (backend), Admin CRUD, Mobile Money Movement | Not started |
 | 6 | 11–12 | Mobile Bills & Cards, Audit, Hardening & Testing | Not started |
 

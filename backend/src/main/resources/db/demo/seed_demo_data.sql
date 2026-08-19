@@ -21,6 +21,20 @@ BEGIN;
 DELETE FROM transactions WHERE account_id IN (
     SELECT id FROM accounts WHERE user_id IN (
         SELECT id FROM users WHERE id::text LIKE 'd0000000-%'));
+-- Transfers and merchants both point at demo accounts, so they have to go before
+-- the accounts do — including transfers made by clicking around the demo, not
+-- just the ones seeded here.
+DELETE FROM transfers WHERE from_account_id IN (
+    SELECT id FROM accounts WHERE user_id IN (
+        SELECT id FROM users WHERE id::text LIKE 'd0000000-%'))
+   OR to_account_id IN (
+    SELECT id FROM accounts WHERE user_id IN (
+        SELECT id FROM users WHERE id::text LIKE 'd0000000-%'));
+DELETE FROM merchants WHERE settlement_account_id IN (
+    SELECT id FROM accounts WHERE user_id IN (
+        SELECT id FROM users WHERE id::text LIKE 'd0000000-%'));
+DELETE FROM beneficiaries WHERE user_id IN (
+    SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
 DELETE FROM otp_codes WHERE user_id IN (
     SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
 DELETE FROM accounts WHERE user_id IN (
@@ -51,7 +65,14 @@ INSERT INTO users (id, first_name, last_name, password_hash, email, nid_number,
 ('d0000000-0000-0000-0000-000000000004', 'Vibol', 'Keo',
  '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
  '045678901', '2028-06-08', '1991-09-17', 'MALE', '+85512000004',
- 'CUSTOMER', 'SUSPENDED', TRUE, now() - INTERVAL '30 days');
+ 'CUSTOMER', 'SUSPENDED', TRUE, now() - INTERVAL '30 days'),
+-- Holds the three merchants' settlement accounts (US-034). Merchants are not
+-- users and never log in; accounts.user_id is NOT NULL, so the demo's merchant
+-- accounts need an owner and this is it. Nothing logs in as this customer.
+('d0000000-0000-0000-0000-000000000005', 'Merchant', 'Settlement',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
+ '056789012', '2032-02-20', '1985-05-05', 'MALE', '+85512000005',
+ 'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '100 days');
 
 -- ----------------------------------------------------------------- accounts
 -- Demo account numbers use the 9000000000xx block so they cannot collide with
@@ -69,7 +90,16 @@ INSERT INTO accounts (id, user_id, account_number, account_type, currency, balan
 ('a0000000-0000-0000-0000-000000000005', 'd0000000-0000-0000-0000-000000000003',
  '900000000005', 'SAVINGS',  'KHR', 5000000.0000, now() - INTERVAL '78 days'),
 ('a0000000-0000-0000-0000-000000000006', 'd0000000-0000-0000-0000-000000000004',
- '900000000006', 'SAVINGS',  'USD',     250.0000, now() - INTERVAL '30 days');
+ '900000000006', 'SAVINGS',  'USD',     250.0000, now() - INTERVAL '30 days'),
+-- Merchant settlement accounts (US-034). Currency is the merchant's: a USD
+-- account cannot pay Psar Thmei, which is the cross-currency rejection worth
+-- demoing. They open empty — a merchant's balance is whatever gets paid in.
+('a0000000-0000-0000-0000-000000000007', 'd0000000-0000-0000-0000-000000000005',
+ '900000000007', 'CHECKING', 'USD',       0.0000, now() - INTERVAL '100 days'),
+('a0000000-0000-0000-0000-000000000008', 'd0000000-0000-0000-0000-000000000005',
+ '900000000008', 'CHECKING', 'KHR',       0.0000, now() - INTERVAL '100 days'),
+('a0000000-0000-0000-0000-000000000009', 'd0000000-0000-0000-0000-000000000005',
+ '900000000009', 'CHECKING', 'USD',       0.0000, now() - INTERVAL '100 days');
 
 -- ------------------------------------------------------------- transactions
 -- Spread across ~3 months so US-017's list, US-018's date/type/amount filters
@@ -99,5 +129,22 @@ INSERT INTO transactions (id, account_id, type, amount, currency, description, b
 ('7a000000-0000-0000-0000-000000000011', 'a0000000-0000-0000-0000-000000000005', 'DEPOSIT',    1000000.0000, 'KHR', 'Savings top-up',      5000000.0000, now() - INTERVAL '21 days'),
 -- 900000000006 — Vibol (suspended), USD savings
 ('7a000000-0000-0000-0000-000000000012', 'a0000000-0000-0000-0000-000000000006', 'DEPOSIT',        250.0000, 'USD', 'Opening deposit',         250.0000, now() - INTERVAL '8 days');
+
+-- --------------------------------------------------------------- merchants
+-- US-034. Three, per the tracker's minimum, each settling into one of the
+-- accounts above. Payload for a merchant QR is OBS1:M:<code>, optionally with a
+-- currency and amount: OBS1:M:MERCH-ANGKOR:USD:12.50.
+--
+-- Riverside Books is the ALWAYS_DECLINES one, and is named like a normal shop on
+-- purpose: a demo that shows a decline from a merchant called "Decline Test"
+-- demonstrates nothing. Paying it writes a FAILED transfer, moves no money and
+-- returns 400 MERCHANT_DECLINED.
+INSERT INTO merchants (id, merchant_code, display_name, settlement_account_id, status, created_at) VALUES
+('c0000000-0000-0000-0000-000000000001', 'MERCH-ANGKOR',  'Angkor Coffee',
+ 'a0000000-0000-0000-0000-000000000007', 'ACTIVE',          now() - INTERVAL '100 days'),
+('c0000000-0000-0000-0000-000000000002', 'MERCH-PSAR',    'Psar Thmei Market',
+ 'a0000000-0000-0000-0000-000000000008', 'ACTIVE',          now() - INTERVAL '100 days'),
+('c0000000-0000-0000-0000-000000000003', 'MERCH-DECLINE', 'Riverside Books',
+ 'a0000000-0000-0000-0000-000000000009', 'ALWAYS_DECLINES', now() - INTERVAL '100 days');
 
 COMMIT;

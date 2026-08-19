@@ -2,6 +2,7 @@ package com.obs.backend.feature.admin.controller;
 
 import static com.obs.backend.feature.account.AuthTestSupport.registerVerifyLoginAndGetAccessToken;
 import static com.obs.backend.feature.admin.AdminAuthTestSupport.adminLoginAndGetAccessToken;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -28,44 +29,80 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureMockMvc
 @Import(RecordingOtpSenderConfig.class)
 @Transactional
-class AdminKpiControllerTest {
+class AdminTransferControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private RecordingOtpSender otpSender;
     @PersistenceContext private EntityManager entityManager;
 
     @Test
-    void adminCanGetKpisWithRealTransfers() throws Exception {
-        String customerToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-17-000-001", "correct-horse");
+    void adminCanListAndFilterTransfers() throws Exception {
+        String customerToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-30-000-001", "correct-horse");
         String adminToken = adminLoginAndGetAccessToken(mockMvc, otpSender);
 
         String acc1 = openAccount(customerToken, "SAVINGS", "USD");
         String acc2 = openAccount(customerToken, "CHECKING", "USD");
-        fund(acc1, "500.00");
+        fund(acc1, "1000.00");
 
+        // Make a transfer
         mockMvc.perform(post("/transfers")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + customerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fromAccountId\": \"%s\", \"toAccountId\": \"%s\", \"amount\": 100.00, \"description\": \"Test\"}".formatted(acc1, acc2)))
+                        .content("{\"fromAccountId\": \"%s\", \"toAccountId\": \"%s\", \"amount\": 150.00, \"description\": \"Dinner\"}".formatted(acc1, acc2)))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/admin/kpis").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+        // Make an external transfer
+        mockMvc.perform(post("/transfers/external")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fromAccountId\": \"%s\", \"beneficiaryBankCode\": \"BANKKHPP\", \"beneficiaryAccountNumber\": \"1234567890\", \"currency\": \"USD\", \"amount\": 50.00, \"description\": \"Gift\"}".formatted(acc1)))
+                .andExpect(status().isCreated());
+
+        // Admin lists all transfers
+        mockMvc.perform(get("/admin/transfers")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalCustomers").isNumber())
-                .andExpect(jsonPath("$.totalAccounts").isNumber())
-                .andExpect(jsonPath("$.failedLogins").isNumber())
-                .andExpect(jsonPath("$.todayTransfers").value(1))
-                .andExpect(jsonPath("$.todayVolume").value(100.0))
-                .andExpect(jsonPath("$.displayCurrency").value("USD"));
-    }
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].fromAccountNumber").exists())
+                .andExpect(jsonPath("$.totalElements").value(2));
 
-    @Test
-    void customerTokenIsForbidden() throws Exception {
-        String customerToken =
-                registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-17-000-002", "correct-horse");
+        // Filter by minAmount
+        mockMvc.perform(get("/admin/transfers")
+                        .param("minAmount", "100.00")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].amount").value(150.0));
 
-        mockMvc.perform(get("/admin/kpis").header(HttpHeaders.AUTHORIZATION, "Bearer " + customerToken))
-                .andExpect(status().isForbidden());
+        // Filter by maxAmount
+        mockMvc.perform(get("/admin/transfers")
+                        .param("maxAmount", "80.00")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].amount").value(50.0));
+
+        // Filter by status
+        mockMvc.perform(get("/admin/transfers")
+                        .param("status", "COMPLETED")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(2)));
+
+        // Filter by currency
+        mockMvc.perform(get("/admin/transfers")
+                        .param("currency", "KHR")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(0)));
+
+        // Filter by account ID
+        mockMvc.perform(get("/admin/transfers")
+                        .param("accountId", acc2)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].amount").value(150.0));
     }
 
     private String openAccount(String token, String accountType, String currency) throws Exception {
