@@ -256,14 +256,14 @@ class BeneficiaryControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"displayName\": \"Landlord\", \"bankCode\": \"ABCDKHPP\","
                                         + " \"accountNumber\": \"9988776655\"}"))
-                .andExpect(status().isForbidden());
-        mockMvc.perform(get("/beneficiaries")).andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/beneficiaries")).andExpect(status().isUnauthorized());
         mockMvc.perform(
                         patch("/beneficiaries/" + id)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"displayName\": \"Landlord\"}"))
-                .andExpect(status().isForbidden());
-        mockMvc.perform(delete("/beneficiaries/" + id)).andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/beneficiaries/" + id)).andExpect(status().isUnauthorized());
     }
 
     private MockHttpServletRequestBuilder createRequest(

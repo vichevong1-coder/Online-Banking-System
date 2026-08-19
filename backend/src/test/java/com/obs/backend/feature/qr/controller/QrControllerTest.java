@@ -431,13 +431,13 @@ class QrControllerTest {
     @Test
     void qrEndpointsAreRejectedWithoutAToken() throws Exception {
         mockMvc.perform(get("/qr/me").param("accountId", UUID.randomUUID().toString()))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(
                         post("/qr/pay")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"payload\": \"OBS1:P:900000000001\", \"fromAccountId\": \"%s\"}"
                                         .formatted(UUID.randomUUID())))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder payRequest(

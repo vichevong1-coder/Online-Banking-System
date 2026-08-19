@@ -147,4 +147,72 @@ INSERT INTO merchants (id, merchant_code, display_name, settlement_account_id, s
 ('c0000000-0000-0000-0000-000000000003', 'MERCH-DECLINE', 'Riverside Books',
  'a0000000-0000-0000-0000-000000000009', 'ALWAYS_DECLINES', now() - INTERVAL '100 days');
 
+-- ------------------------------------------------------------ beneficiaries
+-- US-029/US-030. Saved payees, so the beneficiary list is not empty on a fresh
+-- database and Sprint 5's quick-transfer (US-031) has favorites to show.
+-- bank_code and account_number carry the same shapes CreateExternalTransferRequest
+-- validates, so any of these can be pasted straight into POST /transfers/external.
+INSERT INTO beneficiaries (id, user_id, display_name, bank_code, account_number,
+                           favorite, created_at, updated_at) VALUES
+-- Sophea's payees. Two favorites, so the flag is visibly not all-or-nothing.
+('b0000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001',
+ 'Dara Kim (landlord)', 'ACLBKHPP', '000123456789', TRUE,  now() - INTERVAL '70 days', now() - INTERVAL '70 days'),
+('b0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000001',
+ 'Wing Money',          'WINGKHPP', '855012345678', TRUE,  now() - INTERVAL '45 days', now() - INTERVAL '45 days'),
+('b0000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000001',
+ 'Sokha (sister)',      'ABAAKHPP', '001122334455', FALSE, now() - INTERVAL '20 days', now() - INTERVAL '20 days'),
+-- Ratana keeps one, so the list is not identical for every demo login.
+('b0000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-000000000002',
+ 'Phnom Penh Water',    'CANAKHPP', '778899001122', FALSE, now() - INTERVAL '30 days', now() - INTERVAL '30 days');
+
+-- ---------------------------------------------------------------- transfers
+-- US-050's feed and US-053's tiles both read this table, and both render empty
+-- without it.
+--
+-- These are history rows only: no matching transactions legs and no balance
+-- arithmetic. The account balances and the transactions above are already
+-- internally consistent, and rewriting them to reconcile with seeded transfers
+-- would make the seed fragile for no demo gain. Transfers made by clicking
+-- around the running app do write both legs, and the delete block above removes
+-- those too.
+--
+-- Dated deliberately: the rows at now() are what US-053's "transfers today"
+-- count and volume tiles read, and that KPI counts COMPLETED USD only, so the
+-- FAILED and KHR rows below must not appear in it.
+INSERT INTO transfers (id, from_account_id, to_account_id, external_ref, amount,
+                       currency, status, reference, description, created_at) VALUES
+-- Today — the only rows US-053's tiles should count. Two COMPLETED USD: $125.75.
+('e0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001',
+ 'a0000000-0000-0000-0000-000000000003', NULL,             100.5000, 'USD', 'COMPLETED',
+ 'TRF7QK2M4X9A', 'Rent share',            now() - INTERVAL '3 hours'),
+('e0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003',
+ 'a0000000-0000-0000-0000-000000000004', NULL,              25.2500, 'USD', 'COMPLETED',
+ 'TRF5NP8W3H6B', 'Lunch',                 now() - INTERVAL '1 hour'),
+-- Today but deliberately excluded from the USD tile: KHR, and a decline.
+('e0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000002',
+ 'a0000000-0000-0000-0000-000000000005', NULL,          250000.0000, 'KHR', 'COMPLETED',
+ 'TRF2VC9F7T4D', 'Market money',          now() - INTERVAL '2 hours'),
+-- The Riverside Books decline (US-034), so the feed's FAILED filter has a row.
+('e0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000001',
+ 'a0000000-0000-0000-0000-000000000009', NULL,              18.0000, 'USD', 'FAILED',
+ 'TRF6JM1Q5Z8E', 'Riverside Books',       now() - INTERVAL '4 hours'),
+-- Interbank, still awaiting settlement — the only status PENDING is reachable in.
+('e0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000001',
+ NULL, 'ACLBKHPP:000123456789',           450.0000, 'USD', 'PENDING',
+ 'TRF3XB7R2K9C', 'August rent',           now() - INTERVAL '5 hours'),
+-- Older history, so the feed's date-range filter has something to exclude.
+('e0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000001',
+ 'a0000000-0000-0000-0000-000000000004', NULL,             150.0000, 'USD', 'COMPLETED',
+ 'TRF8HD4L6Y1F', 'To Nita',               now() - INTERVAL '35 days'),
+('e0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000003',
+ NULL, 'WINGKHPP:855012345678',           320.0000, 'USD', 'COMPLETED',
+ 'TRF9TG3S8N5H', 'Wing cash out',         now() - INTERVAL '18 days'),
+('e0000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0000-000000000005',
+ 'a0000000-0000-0000-0000-000000000002', NULL,          750000.0000, 'KHR', 'COMPLETED',
+ 'TRF4WY6P9J2G', 'Repayment',             now() - INTERVAL '9 days'),
+-- A large one, so the feed's amount filter has an outlier to find.
+('e0000000-0000-0000-0000-000000000009', 'a0000000-0000-0000-0000-000000000003',
+ 'a0000000-0000-0000-0000-000000000001', NULL,            1200.0000, 'USD', 'COMPLETED',
+ 'TRF1ZR5V7M3K', 'Car deposit',           now() - INTERVAL '52 days');
+
 COMMIT;

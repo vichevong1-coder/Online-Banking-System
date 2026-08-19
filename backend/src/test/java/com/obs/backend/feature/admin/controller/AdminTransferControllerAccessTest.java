@@ -36,7 +36,7 @@ class AdminTransferControllerAccessTest {
 
     @Test
     void anonymousRequestIsRejected() throws Exception {
-        mockMvc.perform(get("/admin/transfers")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/admin/transfers")).andExpect(status().isUnauthorized());
     }
 
     @Test

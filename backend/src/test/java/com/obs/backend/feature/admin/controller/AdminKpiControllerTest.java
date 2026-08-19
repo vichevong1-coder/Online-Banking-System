@@ -39,6 +39,12 @@ class AdminKpiControllerTest {
         String customerToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-17-000-001", "correct-horse");
         String adminToken = adminLoginAndGetAccessToken(mockMvc, otpSender);
 
+        // US-053 is a system-wide KPI, so it cannot be scoped to this test's own rows the way the
+        // transfer feed's tests are. Assert the delta instead: an absolute figure here passes only
+        // while the transfers table is empty, and running seed_demo_data.sql breaks it.
+        long transfersBefore = kpiLong(adminToken, "$.todayTransfers");
+        double volumeBefore = kpiDouble(adminToken, "$.todayVolume");
+
         String acc1 = openAccount(customerToken, "SAVINGS", "USD");
         String acc2 = openAccount(customerToken, "CHECKING", "USD");
         fund(acc1, "500.00");
@@ -54,8 +60,8 @@ class AdminKpiControllerTest {
                 .andExpect(jsonPath("$.totalCustomers").isNumber())
                 .andExpect(jsonPath("$.totalAccounts").isNumber())
                 .andExpect(jsonPath("$.failedLogins").isNumber())
-                .andExpect(jsonPath("$.todayTransfers").value(1))
-                .andExpect(jsonPath("$.todayVolume").value(100.0))
+                .andExpect(jsonPath("$.todayTransfers").value((int) (transfersBefore + 1)))
+                .andExpect(jsonPath("$.todayVolume").value(volumeBefore + 100.0))
                 .andExpect(jsonPath("$.displayCurrency").value("USD"));
     }
 
@@ -66,6 +72,21 @@ class AdminKpiControllerTest {
 
         mockMvc.perform(get("/admin/kpis").header(HttpHeaders.AUTHORIZATION, "Bearer " + customerToken))
                 .andExpect(status().isForbidden());
+    }
+
+    private long kpiLong(String adminToken, String path) throws Exception {
+        return ((Number) readKpi(adminToken, path)).longValue();
+    }
+
+    private double kpiDouble(String adminToken, String path) throws Exception {
+        return ((Number) readKpi(adminToken, path)).doubleValue();
+    }
+
+    private Object readKpi(String adminToken, String path) throws Exception {
+        MvcResult result = mockMvc.perform(get("/admin/kpis").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        return com.jayway.jsonpath.JsonPath.read(result.getResponse().getContentAsString(), path);
     }
 
     private String openAccount(String token, String accountType, String currency) throws Exception {

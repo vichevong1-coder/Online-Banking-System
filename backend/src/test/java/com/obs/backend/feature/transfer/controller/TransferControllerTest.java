@@ -239,9 +239,9 @@ class TransferControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"fromAccountId\": \"%s\", \"toAccountId\": \"%s\", \"amount\": 1}"
                                         .formatted(UUID.randomUUID(), UUID.randomUUID())))
-                .andExpect(status().isForbidden());
-        mockMvc.perform(get("/transfers")).andExpect(status().isForbidden());
-        mockMvc.perform(get("/transfers/" + UUID.randomUUID())).andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/transfers")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/transfers/" + UUID.randomUUID())).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -461,7 +461,7 @@ class TransferControllerTest {
                         post("/transfers/external")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"fromAccountId\": \"%s\"}".formatted(UUID.randomUUID())))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder externalTransferRequest(

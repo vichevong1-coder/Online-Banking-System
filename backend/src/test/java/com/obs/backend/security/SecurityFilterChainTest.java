@@ -31,7 +31,24 @@ class SecurityFilterChainTest {
 
     @Test
     void requestWithNoTokenIsRejected() throws Exception {
-        mockMvc.perform(get("/security-test/ping")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/security-test/ping")).andExpect(status().isUnauthorized());
+    }
+
+    /**
+     * The two rejections have to stay distinguishable. web-admin's shared API client refreshes the
+     * access token and replays the request on a 401, and must not do either on a 403 — a role
+     * denial is not fixed by a fresher token. Before the entry point was configured, both came back
+     * as 403 and the retry was unreachable.
+     */
+    @Test
+    void anUnauthenticatedRejectionIs401AndARoleDenialIs403() throws Exception {
+        mockMvc.perform(get("/security-test/admin-only"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string("{\"error\":\"UNAUTHENTICATED\"}"));
+
+        String customerToken = jwtService.generateAccessToken("customer-42", Set.of(Role.CUSTOMER));
+        mockMvc.perform(get("/security-test/admin-only").header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -48,7 +65,7 @@ class SecurityFilterChainTest {
         String token = jwtService.generateRefreshToken("customer-42");
 
         mockMvc.perform(get("/security-test/ping").header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

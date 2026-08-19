@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -71,6 +73,17 @@ public class SecurityConfig {
                         .requestMatchers("/error")
                         .permitAll()
                         .anyRequest().authenticated())
+                // Without an entry point, an unauthenticated request falls through as anonymous and
+                // Spring answers 403, which is indistinguishable from "signed in but not allowed".
+                // The web-admin client needs to tell those apart: a 401 means the access token
+                // expired and is worth refreshing and retrying, whereas a 403 never is. Role
+                // denials keep the default 403 via the access-denied handler.
+                .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(
+                        (request, response, authException) -> {
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write("{\"error\":\"UNAUTHENTICATED\"}");
+                        }))
                 .addFilterBefore(
                         new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
