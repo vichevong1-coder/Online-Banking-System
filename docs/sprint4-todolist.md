@@ -120,10 +120,10 @@ the same thing and is supposed to be assembly, not a rebuild.
   nor `features/customers/api.ts` has a 401-retry path. Sprint 3 deferred this to "US-046 or the H9
   revocation work" — US-046 shipped and it is still open. Screen 4 is another long-lived data screen
   that will hit the same wall, so fix it in the shared API helper before building it.
-- **US-020 (statement email) is still homeless.** It was left open at the end of Sprint 2, blocked on
-  the email-address source decision, and the Rev 3 resequencing did not assign it to a sprint. Either
-  claim it here (Mailpit already exists, so it is small) or explicitly drop it from scope — leaving it
-  unassigned is how it disappears.
+- [x] **US-020 (statement email) now has a home.** Resolved by decision rather than by code: the
+  address is an optional profile field, and the story moves to Sprint 5 to be built after US-036,
+  which is where the customer self-service surface it needs actually gets created. Sprint 5 carries
+  a tripwire to drop it outright if US-036 slips. See `sprint-plan.md`.
 
 ## Out of scope for Sprint 4
 
