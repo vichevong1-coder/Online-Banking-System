@@ -103,8 +103,8 @@ gets `403`, same as every Sprint 3 admin endpoint.
 
 ## Web admin pages (`web-admin/`)
 
-- [ ] Transaction monitor — screen 4, read-only filterable transfer feed (US-050)
-- [ ] Unstub US-053's transfer count & volume tiles on the KPI home, now that `transfers` exists —
+- [x] Transaction monitor — screen 4, read-only filterable transfer feed (US-050)
+- [x] Unstub US-053's transfer count & volume tiles on the KPI home, now that `transfers` exists —
       `AdminKpiServiceImpl` has the stub marked with a comment pointing at this sprint
 
 `components/ui/data-table.tsx` is already generic (`DataTable<T>` with a `Column<T>` list) and screen

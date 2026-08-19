@@ -88,6 +88,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Listen for background token refreshes or expirations triggered by api-client
+  useEffect(() => {
+    const handleTokenRefreshed = (e: Event) => {
+      const customEvent = e as CustomEvent<string>
+      if (customEvent.detail) {
+        setAccessToken(customEvent.detail)
+      }
+    }
+
+    const handleAuthExpired = () => {
+      clearStoredSession()
+      setEmail(null)
+      setChallengeToken(null)
+      setAccessToken(null)
+      setUser(null)
+      setStatus("signed-out")
+    }
+
+    window.addEventListener("obs-token-refreshed", handleTokenRefreshed)
+    window.addEventListener("obs-auth-expired", handleAuthExpired)
+
+    return () => {
+      window.removeEventListener("obs-token-refreshed", handleTokenRefreshed)
+      window.removeEventListener("obs-auth-expired", handleAuthExpired)
+    }
+  }, [])
+
   const value = useMemo<AuthContextValue>(
     () => ({
       status,

@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from "react-router"
-import { LayoutDashboard, Landmark, LogOut, Settings, ShieldCheck, Users } from "lucide-react"
+import { ArrowLeftRight, LayoutDashboard, Landmark, LogOut, Settings, ShieldCheck, Users } from "lucide-react"
 
 import {
   Sidebar,
@@ -29,6 +29,7 @@ import { useAuth } from "@/features/auth/auth-context"
 const NAV_ITEMS = [
   { to: "/", label: "Overview", icon: LayoutDashboard },
   { to: "/customers", label: "Customers", icon: Users },
+  { to: "/transfers", label: "Transfers", icon: ArrowLeftRight },
   { to: "/roles", label: "Roles & Staff", icon: ShieldCheck },
   { to: "/settings", label: "Settings", icon: Settings },
 ]

@@ -11,8 +11,8 @@ const KPI_MOCK = {
   totalCustomers: 120,
   totalAccounts: 250,
   failedLogins: 5,
-  todayTransfers: 0,
-  todayVolume: 0,
+  todayTransfers: 42,
+  todayVolume: 12500.5,
   displayCurrency: "USD",
 }
 
@@ -33,15 +33,20 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-test("renders KPI metric cards accurately", async () => {
+test("renders KPI metric cards accurately including unstubbed transfer KPIs", async () => {
   render(<OverviewPage />)
 
   expect(await screen.findByText("120")).toBeInTheDocument()
   expect(screen.getByText("250")).toBeInTheDocument()
   expect(screen.getByText("5")).toBeInTheDocument()
+  expect(screen.getByText("42")).toBeInTheDocument()
+  expect(screen.getByText("$12,500.50")).toBeInTheDocument()
   expect(screen.getByText("Total Customers")).toBeInTheDocument()
   expect(screen.getByText("Total Accounts")).toBeInTheDocument()
   expect(screen.getByText("Failed Logins")).toBeInTheDocument()
+  expect(screen.getByText("Today's Transfers")).toBeInTheDocument()
+  expect(screen.getByText("Today's Transfer Volume")).toBeInTheDocument()
+  expect(screen.queryByText("Sprint 4")).not.toBeInTheDocument()
 })
 
 test("handles KPI fetch failure and retry", async () => {
