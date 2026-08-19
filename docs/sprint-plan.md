@@ -28,9 +28,9 @@ This plan covers the original feature set minus the removals listed above, acros
 | Sprint | Weeks | Theme | Status |
 |---|---|---|---|
 | 1 | 1–2 | Authentication & Onboarding | **Done** |
-| 2 | 3–4 | Accounts & Balances | **Done except US-020, US-022, US-023** |
-| 3 | 5–6 | Admin Portal I — customers, KPIs, roles, status | In progress |
-| 4 | 7–8 | Money Movement (backend) & Transfer Monitoring | Not started |
+| 2 | 3–4 | Accounts & Balances | **Done except US-020 (moved to Sprint 5), US-022, US-023** |
+| 3 | 5–6 | Admin Portal I — customers, KPIs, roles, status | **Done** |
+| 4 | 7–8 | Money Movement (backend) & Transfer Monitoring | **Done** |
 | 5 | 9–10 | Bills & Cards (backend), Admin CRUD, Mobile Money Movement | Not started |
 | 6 | 11–12 | Mobile Bills & Cards, Audit, Hardening & Testing | Not started |
 
@@ -51,7 +51,8 @@ Verified against the git history and the working tree, not from memory:
 | US-013 – US-019 — accounts, balances, history, PDF statements `[BE]` | `8930a57` |
 | US-013 – US-019, US-021, US-024 — mobile account screens | `5446444` |
 
-**Still open from Sprint 2:** US-020 (statement email — blocked on the email-address decision),
+**Still open from Sprint 2:** US-020 (statement email — no longer blocked; the email-address
+question is settled and the story now sits in Sprint 5, after US-036),
 US-022 and US-023 (notifications — no `feature/notification` package exists yet).
 
 This matters for the resequencing below: **the mobile app is already built through the whole of
@@ -100,7 +101,7 @@ Build them in this sequence. Token handling and the role/status model come *befo
 
 ### US-001 acceptance criteria — note
 
-Includes a `docker-compose.yml` with **two** services: `postgres:17-alpine` (matching `backend-ci.yml`) and `axllent/mailpit`. Migration tooling (Flyway or Liquibase) is named here, not improvised later. Mailpit stays in the stack for US-020's statement email in Sprint 2 even though OTP no longer uses email — see below.
+Includes a `docker-compose.yml` with **two** services: `postgres:17-alpine` (matching `backend-ci.yml`) and `axllent/mailpit`. Migration tooling (Flyway or Liquibase) is named here, not improvised later. Mailpit stays in the stack for US-020's statement email, which now lands in Sprint 5, even though OTP no longer uses email — see below.
 
 ### US-007 acceptance criteria — note
 
@@ -147,7 +148,7 @@ Deliver core account features: linked accounts, balances, transaction history, a
 - **US-017** Transaction history – list & filter `[Flutter]` `[BE]`
 - **US-018** Transaction history – search by date / type / amount `[Flutter]` `[BE]`
 - **US-019** Statement download – generate PDF statement `[BE]`
-- **US-020** Statement download – email statement `[BE]`
+- **US-020** Statement download – email statement `[BE]` *(moved to Sprint 5 — see the decision there)*
 - **US-021** Statement download – in-app viewer `[Flutter]`
 - **US-022** Notifications – push notification infrastructure `[BE]` `[Flutter]` → *carried to Sprint 3*
 - **US-023** Notifications – balance change alerts `[BE]` `[Flutter]` → *carried to Sprint 3*
@@ -155,9 +156,9 @@ Deliver core account features: linked accounts, balances, transaction history, a
 
 ### Notes
 - **US-016** is now tagged `[Flutter]` as well. A backend that holds multi-currency balances needs a currency selector or per-currency rows in the app, or there is nothing to demo.
-- **US-020** works end-to-end because Mailpit exists from Sprint 1 — the statement email arrives in the inbox at `localhost:8025` with the PDF attached.
+- **US-020 does not ship in this sprint.** It moved to Sprint 5, after US-036. When it is built, it works end-to-end because Mailpit has existed since Sprint 1 — the statement email arrives at `localhost:8025` with the PDF attached.
 - **US-022** should define a single `NotificationService` with pluggable channels (push, email, SMS). US-023, US-035 and US-060 all attach to it rather than each inventing their own path. **The push channel itself is an unmade decision and blocks this story** — there is no Firebase project for a local demo. Default to a `notifications` table plus in-app polling, with FCM as a later swap behind the same interface; that is the same stub-behind-an-interface shape `OtpSender` already uses. Decide before Sprint 2 planning.
-- **US-020's mail configuration is deferred behind its own open question.** `application.properties` has no `spring.mail.*` and deliberately will not get any until the email-address question at the bottom of this plan is settled. If the answer is "collect email separately," add `spring.mail.host` / `spring.mail.port` pointing at Mailpit as part of US-020's acceptance criteria. If the answer is "drop email delivery," US-020 is cut and Mailpit leaves `docker-compose.yml` with it. Do not configure mail before that decision.
+- **US-020 moved to Sprint 5 and its email-address question is settled** — see the Sprint 5 entry. The address is an optional profile field, never a KYC field, and `spring.mail.*` gets configured as part of US-020's acceptance criteria there. Mailpit stays in `docker-compose.yml` until and unless the tripwire in Sprint 5 fires.
 - **US-024 owns mobile session persistence.** The Flutter `ApiClient` currently holds the access token in memory only, and `pubspec.yaml` has no secure-storage dependency — so closing the app logs the customer out, and the refresh token the backend issues has nowhere to live. US-024 is the first screen that must survive an app restart, so it carries the fix: add `flutter_secure_storage`, persist the **refresh token only** (mirroring the React admin's choice), and re-exchange it for an access token on launch. Sprint 4's US-036 / US-037 assume a durable session exists.
 
 ### Deliverable
@@ -258,7 +259,7 @@ the mobile screens for these flows follow in Sprint 5.
 - **US-027 must add optimistic locking on `accounts.balance`.** The `Account` entity has no `@Version` field and nothing takes a row lock, so two concurrent debits read the same balance and both write their own result — a lost update that lets the demo create money. Acceptance criteria: a `@Version` column plus migration, a `409` (or a bounded retry) on `OptimisticLockingFailureException`, and a test that fires two simultaneous transfers at one account and proves it cannot overdraw.
 - **Cross-currency transfers are rejected, not converted.** `accounts.currency` exists and US-016 shows per-currency balances, but there is no rate table and no conversion service, and building an FX engine is out of budget for a 12-week solo project. Decision: US-027 rejects a transfer whose source and destination currencies differ with `400 CURRENCY_MISMATCH`; customers move money between same-currency accounts only. Multi-currency stays a display feature. US-053's volume KPI is therefore reported in a single declared display currency — name it in that story.
 - **US-027 carries the transfer-protection story on its own** now that US-040 is cut. It is a hard block: over-limit transfers are rejected with a `400`, not flagged.
-- **US-034 still needs a written spec before it starts.** Minimum viable: seed three demo merchants; scanning a merchant QR settles instantly; one seeded merchant always declines so the failure path is demoable.
+- **US-034's spec is written** — see [`qr-payments-spec.md`](./qr-payments-spec.md), which covers US-032/US-033/US-034 together because the payload format is shared. Three seeded demo merchants, instant settlement, and one merchant that always declines so the failure path is demoable.
 - **The QR schedule risk moved to Sprint 5 with the mobile half.** Generating and parsing QR payloads is backend work and lands here; *scanning* with a physical device camera (US-033) is the part most likely to eat an unplanned day, and that now sits in Sprint 5. Keep the payload format simple enough that the mobile half is genuinely just a camera plus a POST.
 
 ### Deliverable
@@ -274,6 +275,7 @@ up to the backend by delivering the money-movement screens whose APIs shipped in
 
 ### User Stories — backend & admin
 - **US-036** Change password (customer) `[BE]`
+- **US-020** Statement download – email statement `[BE]` *(carried from Sprint 2; build it after US-036)*
 - **US-037** Forgot password / reset flow `[BE]` `[React]`
 - **US-038** Bill payment – utility provider model & seed data `[BE]`
 - **US-039** Bill payment – pay electricity / water / internet `[BE]`
@@ -297,6 +299,19 @@ up to the backend by delivering the money-movement screens whose APIs shipped in
 - **US-022 / US-023** Notifications – in-app notification list & balance alerts `[Flutter]` *(backend shipped in Sprint 3)*
 
 ### Notes
+- **US-020's email-address source is decided: an optional profile field, not a KYC field.**
+  Registration deliberately dropped email in Sprint 1 and customers are identified by phone; that
+  stays true. The reason the story sits here rather than in Sprint 4 is that customers have no
+  self-service surface at all today — admins have `AdminSelfController`, customers have nothing —
+  and US-036 has to build one. Once it exists, US-020 is an email field on it, a send call and
+  `spring.mail.*` pointing at the Mailpit that has been in `docker-compose.yml` since Sprint 1.
+  Build it *after* US-036, never before: on its own it means inventing a customer profile API that
+  US-036 would immediately rework.
+- **Tripwire on US-020.** It has been homeless since Sprint 2 and has survived one resequencing
+  already. If US-036 has not landed by the midpoint of this sprint, **drop US-020 outright** — cut
+  the story, remove Mailpit from `docker-compose.yml`, and leave `spring.mail.*` unconfigured.
+  Statements already download without it. A clean deletion is an acceptable outcome; a third
+  silent deferral into Sprint 6, alongside audit and UAT, is not.
 - **This is the heaviest sprint in the plan** — 10 backend/admin stories plus 9 mobile ones. It is heavy *by construction*: deferring mobile stacks it behind the backend rather than removing it. If something slips, US-041 (scheduled / recurring payments) is the most droppable story here — it is the only one with no demo dependency on anything else.
 - **US-038** seeds providers so US-039 is unblocked, and US-052 gives them a CRUD screen in the same sprint — the ordering constraint is only that US-038 comes first, not that it comes a sprint earlier.
 - **US-037's React half** attaches to the admin login screen built in Sprint 1, so the shell it needs already exists.
@@ -392,9 +407,7 @@ The architecture splits across three layers: a Java / Spring Boot REST API as th
 
 ## Still to be written
 
-- **US-034 merchant QR spec** — seeded merchants, settlement behaviour, failure path.
 - **Notifications architecture note** — one `NotificationService` shared by US-022, US-023, US-035 and US-060, written before Sprint 2 starts.
 - **SMS provider choice for US-060** — no vendor picked yet for the live swap behind `OtpSender` (Twilio or similar); needed before Sprint 6 planning.
-- **US-020 email-address source** — statement email now has no KYC-collected email to send to, since registration dropped the email field. Needs a decision before Sprint 2: collect email separately (e.g. optional profile field) or drop US-020's email delivery. Whichever way it lands also decides whether `spring.mail.*` gets configured and whether Mailpit stays in `docker-compose.yml`.
 - **Push notification channel for US-022** — no Firebase project exists for a local demo. Decide before Sprint 2 planning; see the Sprint 2 note for the recommended default.
 - **Feature count** — the "15 functionalities" figure needs re-deriving against the original 20-feature list before it goes back into the Scope section.

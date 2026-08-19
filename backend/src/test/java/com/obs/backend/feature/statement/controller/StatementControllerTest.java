@@ -104,7 +104,7 @@ class StatementControllerTest {
     @Test
     void statementIsRejectedWithoutAToken() throws Exception {
         mockMvc.perform(get("/accounts/00000000-0000-0000-0000-000000000000/statement"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

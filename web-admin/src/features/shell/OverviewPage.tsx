@@ -40,7 +40,7 @@ export function OverviewPage() {
           <p className="text-sm text-muted-foreground">High-level operations and system metrics</p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchKpis} disabled={loading}>
-          <RefreshCw className={`size-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`mr-1 size-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
@@ -108,7 +108,7 @@ export function OverviewPage() {
           </CardContent>
         </Card>
 
-        {/* Today's Transfers */}
+        {/* Today's Transfers (US-053 Unstubbed) */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Today's Transfers</CardTitle>
@@ -118,30 +118,24 @@ export function OverviewPage() {
             {loading ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="flex items-baseline gap-2">
-                <div className="text-2xl font-bold">{kpis?.todayTransfers ?? 0}</div>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">Sprint 4</span>
-              </div>
+              <div className="text-2xl font-bold">{kpis?.todayTransfers.toLocaleString() ?? "0"}</div>
             )}
             <p className="mt-1 text-xs text-muted-foreground">Completed fund transfers</p>
           </CardContent>
         </Card>
 
-        {/* Today's Volume */}
+        {/* Today's Transfer Volume (US-053 Unstubbed) */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Volume</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Transfer Volume</CardTitle>
             <DollarSign className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {loading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
-              <div className="flex items-baseline gap-2">
-                <div className="text-2xl font-bold">
-                  {kpis ? formatMoney(kpis.todayVolume, kpis.displayCurrency || "USD") : "$0.00"}
-                </div>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">Sprint 4</span>
+              <div className="text-2xl font-bold">
+                {kpis ? formatMoney(kpis.todayVolume, kpis.displayCurrency || "USD") : "$0.00"}
               </div>
             )}
             <p className="mt-1 text-xs text-muted-foreground">Transfer volume across system</p>

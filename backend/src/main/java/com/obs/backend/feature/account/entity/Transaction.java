@@ -40,6 +40,11 @@ public class Transaction {
     @Column(name = "balance_after", nullable = false)
     private BigDecimal balanceAfter;
 
+    // Ties this leg back to the transfer that produced it. Null for a
+    // transaction with no transfer behind it, such as a deposit.
+    @Column(name = "transfer_id")
+    private UUID transferId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -60,6 +65,22 @@ public class Transaction {
         this.currency = currency;
         this.description = description;
         this.balanceAfter = balanceAfter;
+    }
+
+    public Transaction(
+            UUID accountId,
+            TransactionType type,
+            BigDecimal amount,
+            Currency currency,
+            String description,
+            BigDecimal balanceAfter,
+            UUID transferId) {
+        this(accountId, type, amount, currency, description, balanceAfter);
+        this.transferId = transferId;
+    }
+
+    public UUID getTransferId() {
+        return transferId;
     }
 
     public UUID getId() {

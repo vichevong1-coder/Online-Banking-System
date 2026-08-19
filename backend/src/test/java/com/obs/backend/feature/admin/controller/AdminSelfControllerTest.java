@@ -86,6 +86,6 @@ class AdminSelfControllerTest {
         mockMvc.perform(post("/admin/me/password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\": \"ChangeMe123!\", \"newPassword\": \"NewPassword123!\"}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }

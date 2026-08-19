@@ -10,6 +10,7 @@ import { SettingsPage } from "@/features/settings/SettingsPage"
 import { AppShellLayout } from "@/features/shell/AppShellLayout"
 import { OverviewPage } from "@/features/shell/OverviewPage"
 import { ProtectedRoute } from "@/features/shell/ProtectedRoute"
+import { TransfersPage } from "@/features/transfers/TransfersPage"
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
             <Route element={<AppShellLayout />}>
               <Route path="/" element={<OverviewPage />} />
               <Route path="/customers" element={<CustomersPage />} />
+              <Route path="/transfers" element={<TransfersPage />} />
               <Route path="/roles" element={<RolesPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>

@@ -59,6 +59,6 @@ class AdminCustomerControllerAccessTest {
 
     @Test
     void anonymousRequestIsRejected() throws Exception {
-        mockMvc.perform(get("/admin/customers")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/admin/customers")).andExpect(status().isUnauthorized());
     }
 }

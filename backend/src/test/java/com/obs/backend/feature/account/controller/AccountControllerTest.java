@@ -48,7 +48,7 @@ class AccountControllerTest {
 
     @Test
     void listAccountsIsRejectedWithoutAToken() throws Exception {
-        mockMvc.perform(get("/accounts")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/accounts")).andExpect(status().isUnauthorized());
     }
 
     @Test

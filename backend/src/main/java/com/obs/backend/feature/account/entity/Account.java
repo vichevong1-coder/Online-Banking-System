@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -41,6 +42,12 @@ public class Account {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    // Optimistic locking (US-027). Two concurrent debits would otherwise both
+    // read the same balance and the second write would discard the first.
+    @Version
+    @Column(nullable = false)
+    private long version;
 
     protected Account() {
     }
