@@ -18,24 +18,12 @@ defaults:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: obs
-          POSTGRES_USER: obs
-          POSTGRES_PASSWORD: obs
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      DB_URL: jdbc:postgresql://localhost:5432/obs
-      DB_USERNAME: obs
-      DB_PASSWORD: obs
+    # No postgres service and no DB_* environment. The suite starts its own
+    # throwaway Postgres through Testcontainers (see
+    # backend/src/test/resources/application-test.properties), so a service
+    # container here would sit unused while the tests talked to a different
+    # database than the one CI provisioned. GitHub-hosted runners ship with a
+    # working Docker daemon, which is all Testcontainers needs.
     steps:
       - uses: actions/checkout@v4
 
