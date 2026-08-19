@@ -312,7 +312,7 @@ up to the backend by delivering the money-movement screens whose APIs shipped in
   the story, remove Mailpit from `docker-compose.yml`, and leave `spring.mail.*` unconfigured.
   Statements already download without it. A clean deletion is an acceptable outcome; a third
   silent deferral into Sprint 6, alongside audit and UAT, is not.
-- **This is the heaviest sprint in the plan** — 10 backend/admin stories plus 9 mobile ones. It is heavy *by construction*: deferring mobile stacks it behind the backend rather than removing it. If something slips, US-041 (scheduled / recurring payments) is the most droppable story here — it is the only one with no demo dependency on anything else.
+- **This is the heaviest sprint in the plan** — 11 backend/admin stories plus 10 mobile ones, counting US-020 carried in from Sprint 2 and US-022/US-023's mobile halves. It is heavy *by construction*: deferring mobile stacks it behind the backend rather than removing it. If something slips, US-041 (scheduled / recurring payments) is the most droppable story here — it is the only one with no demo dependency on anything else.
 - **US-038** seeds providers so US-039 is unblocked, and US-052 gives them a CRUD screen in the same sprint — the ordering constraint is only that US-038 comes first, not that it comes a sprint earlier.
 - **US-037's React half** attaches to the admin login screen built in Sprint 1, so the shell it needs already exists.
 - **US-033's camera work is the schedule risk.** It is the one story in the plan that needs a physical device and cannot be fully verified in an emulator. Start it early in the sprint, not late.
