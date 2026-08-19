@@ -44,7 +44,7 @@ them by copying `.env.example` to `.env` at the repo root.
 ```bash
 cd backend
 ./mvnw spring-boot:run     # run locally
-./mvnw test                 # run tests
+./mvnw test                 # run tests (starts a throwaway Postgres container; needs Docker)
 ./mvnw clean package        # build jar
 ```
 Requires a `.env` (gitignored) — see `backend/README.md` once created for required variables.

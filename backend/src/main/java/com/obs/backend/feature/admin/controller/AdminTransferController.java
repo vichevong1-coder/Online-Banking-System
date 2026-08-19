@@ -6,7 +6,6 @@ import com.obs.backend.feature.admin.dto.AdminTransferResponse;
 import com.obs.backend.feature.admin.service.AdminTransferService;
 import com.obs.backend.feature.transfer.entity.TransferStatus;
 import java.math.BigDecimal;
-import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -33,30 +32,16 @@ public class AdminTransferController {
 
     @GetMapping
     public PageResponse<AdminTransferResponse> listTransfers(
-            @RequestParam(required = false) String fromDate,
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String toDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(required = false) BigDecimal minAmount,
             @RequestParam(required = false) BigDecimal maxAmount,
             @RequestParam(required = false) TransferStatus status,
             @RequestParam(required = false) Currency currency,
-            @RequestParam(required = false) String accountNumber,
-            @RequestParam(required = false) UUID accountId,
+            // One box on the screen, so one parameter: an account id or an account number.
             @RequestParam(required = false) String account,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return adminTransferService.listTransfers(
-                fromDate,
-                startDate,
-                toDate,
-                endDate,
-                minAmount,
-                maxAmount,
-                status,
-                currency,
-                accountNumber,
-                accountId,
-                account,
-                pageable);
+                startDate, endDate, minAmount, maxAmount, status, currency, account, pageable);
     }
 }

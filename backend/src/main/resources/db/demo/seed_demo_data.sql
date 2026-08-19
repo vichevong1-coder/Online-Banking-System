@@ -3,10 +3,12 @@
 --   docker exec -i obs-postgres psql -U obs -d obs \
 --       < backend/src/main/resources/db/demo/seed_demo_data.sql
 --
--- Why not a migration: `application.properties` pins spring.profiles.active=dev
--- and there are no test resources overriding it, so anything Flyway picks up
--- also loads during tests and in CI. This script stays outside
--- spring.flyway.locations so it only ever runs when you run it by hand.
+-- Why not a migration: anything Flyway picks up also runs in tests and in CI,
+-- and demo customers with known passwords have no business in either. This
+-- script stays outside spring.flyway.locations so it only ever runs when you
+-- run it by hand, against the local database from docker-compose. Tests use
+-- their own throwaway container (see application-test.properties) and never
+-- see these rows.
 --
 -- Re-runnable: it deletes its own rows (fixed UUIDs) before inserting, so you
 -- can reset to a known demo state at any time without wiping the database.

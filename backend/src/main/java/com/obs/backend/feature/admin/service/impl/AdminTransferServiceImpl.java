@@ -46,34 +46,29 @@ public class AdminTransferServiceImpl implements AdminTransferService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<AdminTransferResponse> listTransfers(
-            String fromDate,
             String startDate,
-            String toDate,
             String endDate,
             BigDecimal minAmount,
             BigDecimal maxAmount,
             TransferStatus status,
             Currency currency,
-            String accountNumber,
-            UUID accountId,
             String account,
             Pageable pageable) {
 
-        String effectiveFrom = fromDate != null ? fromDate : startDate;
-        String effectiveTo = toDate != null ? toDate : endDate;
+        ParsedDate fromParsed = parseFromDate(startDate);
+        ParsedDate toParsed = parseToDate(endDate);
 
-        ParsedDate fromParsed = parseFromDate(effectiveFrom);
-        ParsedDate toParsed = parseToDate(effectiveTo);
-
-        UUID effectiveAccountId = accountId;
-        String effectiveAccountNumber = accountNumber;
+        // The screen sends one free-text box, so `account` arrives as either an id or an account
+        // number and is told apart by whether it parses as a UUID.
+        UUID effectiveAccountId = null;
+        String effectiveAccountNumber = null;
 
         if (account != null && !account.isBlank()) {
-            account = account.trim();
+            String trimmed = account.trim();
             try {
-                effectiveAccountId = UUID.fromString(account);
+                effectiveAccountId = UUID.fromString(trimmed);
             } catch (IllegalArgumentException e) {
-                effectiveAccountNumber = account;
+                effectiveAccountNumber = trimmed;
             }
         }
 

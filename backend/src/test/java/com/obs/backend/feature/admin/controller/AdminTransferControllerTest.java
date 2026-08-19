@@ -107,7 +107,7 @@ class AdminTransferControllerTest {
 
         // Filter by account ID
         mockMvc.perform(get("/admin/transfers")
-                        .param("accountId", acc2)
+                        .param("account", acc2)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(1)))
