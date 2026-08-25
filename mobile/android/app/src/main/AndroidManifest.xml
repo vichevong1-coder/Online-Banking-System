@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The app is a client of the backend REST API in every build, not just
+         debug — the debug manifest asks for this too, for the Flutter tool. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- US-033: scanning a payment QR with the device camera. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <application
         android:label="mobile"
         android:name="${applicationName}"

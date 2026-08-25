@@ -63,6 +63,14 @@ export function refresh(refreshToken: string) {
   return post<RefreshResponse>("/auth/refresh", { refreshToken })
 }
 
+export function forgotPassword(identifier: string) {
+  return post<void>("/auth/password/forgot", { identifier })
+}
+
+export function resetPassword(identifier: string, code: string, newPassword: string) {
+  return post<void>("/auth/password/reset", { identifier, code, newPassword })
+}
+
 // The challenge token is a JWT — decoding it client-side (no signature check, this is only
 // used to drive the countdown UI) reads its real expiry instead of hardcoding the TTL, so the
 // timer stays correct if JWT_CHALLENGE_TOKEN_TTL is ever changed.

@@ -28,6 +28,11 @@ import {
   type StaffMember,
 } from "@/features/admin/api"
 
+// Mirrors the backend's CreateStaffRequest phone constraint: optional leading "+",
+// then a digit followed by 6-28 more digits, spaces, hyphens or parentheses —
+// capping the total at the 30 characters the phone column holds.
+const PHONE_PATTERN = /^\+?[0-9][0-9 ()-]{6,28}$/
+
 export function RolesPage() {
   const { accessToken } = useAuth()
   const [staffList, setStaffList] = useState<StaffMember[]>([])
@@ -75,6 +80,11 @@ export function RolesPage() {
 
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.password) {
       toast.error("Please fill in all required fields.")
+      return
+    }
+
+    if (!PHONE_PATTERN.test(formData.phone)) {
+      toast.error("Enter a valid phone number.")
       return
     }
 
@@ -201,6 +211,7 @@ export function RolesPage() {
                       value={formData.firstName}
                       onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                       placeholder="e.g. Sothea"
+                      maxLength={255}
                       required
                     />
                   </div>
@@ -211,6 +222,7 @@ export function RolesPage() {
                       value={formData.lastName}
                       onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                       placeholder="e.g. Chan"
+                      maxLength={255}
                       required
                     />
                   </div>
@@ -224,6 +236,7 @@ export function RolesPage() {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="staff@bank.com"
+                    maxLength={255}
                     required
                   />
                 </div>
@@ -235,6 +248,7 @@ export function RolesPage() {
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="+85512345678"
+                    maxLength={30}
                     required
                   />
                 </div>
@@ -260,6 +274,7 @@ export function RolesPage() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="At least 8 characters"
                     minLength={8}
+                    maxLength={100}
                     required
                   />
                 </div>

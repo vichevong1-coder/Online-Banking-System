@@ -1,16 +1,19 @@
 package com.obs.backend.feature.auth.service.impl;
 
 import com.obs.backend.feature.auth.dto.AuthTokenResponse;
+import com.obs.backend.feature.auth.dto.ForgotPasswordRequest;
 import com.obs.backend.feature.auth.dto.LoginRequest;
 import com.obs.backend.feature.auth.dto.LoginResponse;
 import com.obs.backend.feature.auth.dto.RefreshRequest;
 import com.obs.backend.feature.auth.dto.RefreshResponse;
+import com.obs.backend.feature.auth.dto.ResetPasswordRequest;
 import com.obs.backend.feature.auth.dto.TwoFactorResendRequest;
 import com.obs.backend.feature.auth.dto.TwoFactorVerifyRequest;
 import com.obs.backend.feature.auth.entity.OtpPurpose;
 import com.obs.backend.feature.auth.exception.InvalidChallengeTokenException;
 import com.obs.backend.feature.auth.exception.InvalidCredentialsException;
 import com.obs.backend.feature.auth.exception.InvalidLoginIdentifierException;
+import com.obs.backend.feature.auth.exception.InvalidOtpException;
 import com.obs.backend.feature.auth.exception.InvalidRefreshTokenException;
 import com.obs.backend.feature.auth.exception.PhoneNotVerifiedException;
 import com.obs.backend.feature.auth.service.AuthenticationService;
@@ -24,6 +27,8 @@ import com.obs.backend.security.jwt.JwtService;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +36,8 @@ import org.springframework.util.StringUtils;
 
 @Service
 public class AuthenticationServiceImpl implements AuthenticationService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationServiceImpl.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -149,5 +156,39 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 user.getFirstName(),
                 user.getLastName(),
                 user.getRole());
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        String id = request.identifier().trim();
+
+        // Deliberately silent on a miss: the controller returns 204 either way, so this
+        // unauthenticated endpoint cannot be used to test whether a phone number or email
+        // banks here. A 404 for "no such customer" and a 204 for a real one is an
+        // enumeration oracle, and this is reachable without a token.
+        userRepository.findByPhone(id)
+                .or(() -> userRepository.findByEmail(id))
+                .ifPresentOrElse(
+                        user -> otpService.generateAndSend(user, OtpPurpose.PASSWORD_RESET),
+                        () -> log.debug("Password reset requested for an identifier with no account"));
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        String id = request.identifier().trim();
+
+        // InvalidOtpException rather than UserNotFoundException, for the same reason
+        // forgotPassword stays silent: an unknown identifier has to be indistinguishable
+        // from a known one with a wrong code. Otherwise the oracle closed above just moves
+        // to this endpoint — 404 here, 400 INVALID_OR_EXPIRED_OTP there.
+        User user = userRepository.findByPhone(id)
+                .or(() -> userRepository.findByEmail(id))
+                .orElseThrow(InvalidOtpException::new);
+
+        otpService.verify(user, OtpPurpose.PASSWORD_RESET, request.code());
+        user.changePassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 }

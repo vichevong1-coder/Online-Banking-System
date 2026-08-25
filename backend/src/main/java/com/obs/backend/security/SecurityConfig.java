@@ -60,7 +60,9 @@ public class SecurityConfig {
                                 "/auth/login",
                                 "/auth/refresh",
                                 "/auth/2fa/verify",
-                                "/auth/2fa/resend")
+                                "/auth/2fa/resend",
+                                "/auth/password/forgot",
+                                "/auth/password/reset")
                         .permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",

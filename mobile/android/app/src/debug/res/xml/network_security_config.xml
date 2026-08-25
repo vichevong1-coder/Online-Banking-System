@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug builds only. The local demo backend is plain HTTP — on the emulator at
+  http://10.0.2.2:8080, and on a physical phone at the dev machine's LAN address
+  (see mobile/README.md) — and Android has blocked cleartext by default since
+  API 28, so without this every request fails before it leaves the device.
+
+  Deliberately not in src/main: release builds keep the default HTTPS-only
+  policy, so this can never ship with the app.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

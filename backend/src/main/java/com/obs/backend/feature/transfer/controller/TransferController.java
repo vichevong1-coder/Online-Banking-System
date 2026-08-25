@@ -2,6 +2,7 @@ package com.obs.backend.feature.transfer.controller;
 
 import com.obs.backend.common.dto.PageResponse;
 import com.obs.backend.feature.transfer.dto.CreateExternalTransferRequest;
+import com.obs.backend.feature.transfer.dto.CreateP2pTransferRequest;
 import com.obs.backend.feature.transfer.dto.CreateTransferRequest;
 import com.obs.backend.feature.transfer.dto.TransferResponse;
 import com.obs.backend.feature.transfer.service.TransferService;
@@ -37,6 +38,17 @@ public class TransferController {
     @ResponseStatus(HttpStatus.CREATED)
     public TransferResponse createTransfer(@Valid @RequestBody CreateTransferRequest request) {
         return transferService.transfer(currentUserProvider.currentUserId(), request);
+    }
+
+    /**
+     * US-026: to another customer's account at this bank. Separate from
+     * {@link #createTransfer} because the destination is someone else's and is
+     * named by account number — see {@link CreateP2pTransferRequest}.
+     */
+    @PostMapping("/p2p")
+    @ResponseStatus(HttpStatus.CREATED)
+    public TransferResponse createP2pTransfer(@Valid @RequestBody CreateP2pTransferRequest request) {
+        return transferService.transferToAccountNumber(currentUserProvider.currentUserId(), request);
     }
 
     /**

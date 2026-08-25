@@ -177,6 +177,7 @@ class JwtServiceTest {
         var claims = service.parseClaims(token);
         assertThat(claims.getSubject()).isEqualTo("customer-42");
         assertThat(claims.get("type", String.class)).isEqualTo("ACCESS");
+        @SuppressWarnings("unchecked")
         List<String> roles = claims.get("roles", List.class);
         assertThat(roles).containsExactly("ADMIN");
     }

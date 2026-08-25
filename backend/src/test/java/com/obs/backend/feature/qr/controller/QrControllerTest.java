@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -46,6 +48,7 @@ class QrControllerTest {
     @Autowired private RecordingOtpSender otpSender;
 
     @PersistenceContext private EntityManager entityManager;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
     void myQrPayloadNamesTheCallersAccount() throws Exception {
@@ -82,6 +85,11 @@ class QrControllerTest {
                 .andExpect(jsonPath("$.error").value("ACCOUNT_NOT_FOUND"));
     }
 
+    // NOT_SUPPORTED: the US-035 notification is written by an AFTER_COMMIT listener, which
+    // never fires inside a test transaction that always rolls back. This method therefore
+    // commits for real — it registers its own customer under a phone number no other test
+    // uses, so the rows it leaves behind are inert.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Test
     void payingAPersonalQrMovesMoneyToSomebodyElsesAccount() throws Exception {
         // US-033. The destination is deliberately not the caller's: that is the
@@ -92,7 +100,7 @@ class QrControllerTest {
 
         String payerToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-33-000-002", "correct-horse");
         String payerAccount = openAccount(payerToken, "CHECKING", "USD");
-        fund(payerAccount, "500.0000");
+        fundCommitted(payerAccount, "500.0000");
 
         MvcResult result = mockMvc.perform(payRequest(payerToken, payload, payerAccount, "40.25", "USD", "Lunch"))
                 .andExpect(status().isCreated())
@@ -116,7 +124,7 @@ class QrControllerTest {
                 .andExpect(jsonPath("$.balance").value(40.25));
 
         // Both legs, one transfer — a QR payment is an ordinary internal transfer.
-        assertLegCountForTransfer(transferId, 2);
+        assertLegCountForTransferCommitted(transferId, 2);
         mockMvc.perform(get("/transfers").header(HttpHeaders.AUTHORIZATION, "Bearer " + payerToken))
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.content[0].id").value(transferId))
@@ -545,5 +553,22 @@ class QrControllerTest {
                 .setParameter("transferId", UUID.fromString(transferId))
                 .getSingleResult();
         org.assertj.core.api.Assertions.assertThat(legs.intValue()).isEqualTo(expectedLegs);
+    }
+
+    /**
+     * fund()'s counterpart for the NOT_SUPPORTED tests below: with no transaction active
+     * there is nothing to flush and no JPA cache to clear, and JdbcTemplate auto-commits so
+     * the balance is visible to the request thread.
+     */
+    private void fundCommitted(String accountId, String balance) {
+        jdbcTemplate.update(
+                "UPDATE accounts SET balance = ? WHERE id = ?", new BigDecimal(balance), UUID.fromString(accountId));
+    }
+
+    /** assertLegCountForTransfer's counterpart for the NOT_SUPPORTED test, same reason as fundCommitted. */
+    private void assertLegCountForTransferCommitted(String transferId, int expectedLegs) {
+        Integer legs = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM transactions WHERE transfer_id = ?", Integer.class, UUID.fromString(transferId));
+        org.assertj.core.api.Assertions.assertThat(legs).isEqualTo(expectedLegs);
     }
 }

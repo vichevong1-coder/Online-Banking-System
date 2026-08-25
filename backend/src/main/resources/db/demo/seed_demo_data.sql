@@ -20,6 +20,13 @@
 BEGIN;
 
 -- Clean out previous demo rows, children first (FKs).
+DELETE FROM recurring_bill_payments WHERE user_id IN (
+    SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
+DELETE FROM bill_payments WHERE user_id IN (
+    SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
+DELETE FROM cards WHERE user_id IN (
+    SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
+DELETE FROM bill_providers WHERE id::text LIKE 'f0000000-%';
 DELETE FROM transactions WHERE account_id IN (
     SELECT id FROM accounts WHERE user_id IN (
         SELECT id FROM users WHERE id::text LIKE 'd0000000-%'));
@@ -39,6 +46,10 @@ DELETE FROM beneficiaries WHERE user_id IN (
     SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
 DELETE FROM otp_codes WHERE user_id IN (
     SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
+-- notifications would cascade with their users row, but deleting them explicitly
+-- keeps this block readable as the full inventory of what the seed owns.
+DELETE FROM notifications WHERE user_id IN (
+    SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
 DELETE FROM accounts WHERE user_id IN (
     SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
 DELETE FROM users WHERE id::text LIKE 'd0000000-%';
@@ -47,11 +58,17 @@ DELETE FROM users WHERE id::text LIKE 'd0000000-%';
 -- email stays NULL: customers are identified by phone (US-007/US-009) and the
 -- KYC form collects no email address. phone_verified = TRUE so they can log in
 -- without walking the OTP flow first — except Vibol, see below.
+--
+-- Sophea is the one exception, and it is not a KYC field on her: US-020 makes
+-- email an optional *profile* field a customer sets after registering, so her
+-- row is what one looks like once PATCH /me has been used. Without a single
+-- address on file, POST /statements/{id}/email has no reachable happy path and
+-- can only ever demo its no-address-set error. Mailpit catches the mail.
 INSERT INTO users (id, first_name, last_name, password_hash, email, nid_number,
                    nid_expiry_date, date_of_birth, gender, phone, role, status,
                    phone_verified, created_at) VALUES
 ('d0000000-0000-0000-0000-000000000001', 'Sophea', 'Chan',
- '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'sophea.chan@example.com',
  '012345678', '2030-04-12', '1994-03-08', 'FEMALE', '+85512000001',
  'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '95 days'),
 ('d0000000-0000-0000-0000-000000000002', 'Dara', 'Sok',
@@ -75,6 +92,35 @@ INSERT INTO users (id, first_name, last_name, password_hash, email, nid_number,
  '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
  '056789012', '2032-02-20', '1985-05-05', 'MALE', '+85512000005',
  'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '100 days');
+
+-- ------------------------------------------------------------------- staff
+-- US-047/US-051. Staff are ADMIN-role users: Role has exactly CUSTOMER and
+-- ADMIN, and AdminStaffServiceImpl lists staff with findByRoleOrderByCreatedAtDesc(ADMIN),
+-- so without these rows /admin/staff shows only the bootstrap admin from V2.
+--
+-- KYC columns stay NULL, the same reason V2 relaxed them: an admin has no ID
+-- document on file. They log in by email (US-010) and take 2FA on phone (US-012).
+-- Emails and phones are deliberately distinct from V2's admin@obs.local /
+-- +855000000000 so neither UNIQUE constraint collides with the bootstrap row.
+--
+-- These share the d0000000- prefix so the delete block above already covers them.
+INSERT INTO users (id, first_name, last_name, password_hash, email, nid_number,
+                   nid_expiry_date, date_of_birth, gender, phone, role, status,
+                   phone_verified, created_at) VALUES
+('d0000000-0000-0000-0000-000000000011', 'Sovann', 'Meas',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'sovann.meas@obs.local',
+ NULL, NULL, NULL, NULL, '+85511900001',
+ 'ADMIN', 'ACTIVE', TRUE, now() - INTERVAL '88 days'),
+('d0000000-0000-0000-0000-000000000012', 'Chanda', 'Ly',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'chanda.ly@obs.local',
+ NULL, NULL, NULL, NULL, '+85511900002',
+ 'ADMIN', 'ACTIVE', TRUE, now() - INTERVAL '60 days'),
+-- SUSPENDED, mirroring Vibol on the customer side: US-006's login-path check is
+-- role-independent, and the staff table needs a non-ACTIVE row to render.
+('d0000000-0000-0000-0000-000000000013', 'Rithy', 'Noun',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'rithy.noun@obs.local',
+ NULL, NULL, NULL, NULL, '+85511900003',
+ 'ADMIN', 'SUSPENDED', TRUE, now() - INTERVAL '25 days');
 
 -- ----------------------------------------------------------------- accounts
 -- Demo account numbers use the 9000000000xx block so they cannot collide with
@@ -216,5 +262,140 @@ INSERT INTO transfers (id, from_account_id, to_account_id, external_ref, amount,
 ('e0000000-0000-0000-0000-000000000009', 'a0000000-0000-0000-0000-000000000003',
  'a0000000-0000-0000-0000-000000000001', NULL,            1200.0000, 'USD', 'COMPLETED',
  'TRF1ZR5V7M3K', 'Car deposit',           now() - INTERVAL '52 days');
+
+-- ---------------------------------------------------------------- bill providers (US-038)
+INSERT INTO bill_providers (id, name, category, account_number_pattern, is_active, created_at, updated_at) VALUES
+('f0000000-0000-0000-0000-000000000001', 'EDC', 'ELECTRICITY', '^[0-9]{8,12}$', TRUE, now() - INTERVAL '100 days', now() - INTERVAL '100 days'),
+('f0000000-0000-0000-0000-000000000002', 'PPWSA', 'WATER', '^[0-9]{8,10}$', TRUE, now() - INTERVAL '100 days', now() - INTERVAL '100 days'),
+('f0000000-0000-0000-0000-000000000003', 'Ezecom', 'INTERNET', '^[A-Z0-9]{6,12}$', TRUE, now() - INTERVAL '100 days', now() - INTERVAL '100 days'),
+('f0000000-0000-0000-0000-000000000004', 'Smart', 'INTERNET', '^0[1-9][0-9]{7,8}$', TRUE, now() - INTERVAL '100 days', now() - INTERVAL '100 days'),
+('f0000000-0000-0000-0000-000000000005', 'Cellcard', 'MOBILE_TOPUP', '^0[1-9][0-9]{7,8}$', TRUE, now() - INTERVAL '100 days', now() - INTERVAL '100 days');
+
+-- ---------------------------------------------------------------- cards (US-043)
+-- Note: these ids share the c0000000- prefix with the merchants above. Harmless
+-- because the delete block removes cards by user_id and merchants by
+-- settlement_account_id — but never add a "DELETE FROM cards WHERE id::text LIKE
+-- 'c0000000-%'", which would read as correct and take the three QR merchants too.
+--
+-- pin_hash is a bcrypt hash like a password (never a PIN in clear), and only a
+-- masked number is ever stored.
+INSERT INTO cards (id, user_id, account_id, card_holder_name, card_number_masked, card_number_last_four, pin_hash, card_type, status, expiry_date, daily_limit, per_transaction_limit, created_at, updated_at) VALUES
+('c0000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'SOPHEA CHAN', '411122******1234', '1234', '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'DEBIT', 'ACTIVE', '12/28', 1000.0000, 500.0000, now() - INTERVAL '60 days', now() - INTERVAL '60 days'),
+('c0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', 'DARA SOK', '411122******5678', '5678', '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'DEBIT', 'ACTIVE', '09/27', 2000.0000, 1000.0000, now() - INTERVAL '40 days', now() - INTERVAL '40 days'),
+-- BLOCKED, so POST /cards/{id}/unblock (US-044) has a target on a fresh database.
+-- Pairs with Nita's "Card blocked" notification below.
+('c0000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000004', 'NITA PICH', '411122******9012', '9012', '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'DEBIT', 'BLOCKED', '03/29', 1000.0000, 500.0000, now() - INTERVAL '35 days', now() - INTERVAL '4 days'),
+-- pin_hash NULL: a card issued but never activated, which is the state PATCH
+-- /cards/{id} (US-045) sets a PIN from. The column is nullable for this reason.
+('c0000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000005', 'NITA PICH', '411122******3456', '3456', NULL, 'DEBIT', 'ACTIVE', '06/30', 1000.0000, 500.0000, now() - INTERVAL '10 days', now() - INTERVAL '10 days');
+
+-- ------------------------------------------------- bill payment transfers (US-039)
+-- Bill payments are transfers, not a parallel ledger, so each bill_payments row
+-- below needs the transfers row it points at (bill_payments.transfer_id is NOT
+-- NULL). These mirror what BillPaymentServiceImpl actually writes: an external
+-- transfer with to_account_id NULL, external_ref "BILL:<provider>:<bill account>",
+-- and description "Bill payment to <provider>".
+--
+-- History rows only, exactly like the transfers section above: no transaction
+-- legs and no balance arithmetic. The accounts section's invariant (balance =
+-- the last transaction's balance_after) stays intact because nothing here
+-- touches it.
+INSERT INTO transfers (id, from_account_id, to_account_id, external_ref, amount,
+                       currency, status, reference, description, created_at) VALUES
+('e0000000-0000-0000-0000-000000000010', 'a0000000-0000-0000-0000-000000000001',
+ NULL, 'BILL:EDC:100200300',              42.5000, 'USD', 'COMPLETED',
+ 'BIL2M8K4X7QA', 'Bill payment to EDC',    now() - INTERVAL '12 days'),
+('e0000000-0000-0000-0000-000000000011', 'a0000000-0000-0000-0000-000000000002',
+ NULL, 'BILL:PPWSA:12345678',          68000.0000, 'KHR', 'COMPLETED',
+ 'BIL5R9T3W6NB', 'Bill payment to PPWSA',  now() - INTERVAL '6 days'),
+('e0000000-0000-0000-0000-000000000012', 'a0000000-0000-0000-0000-000000000003',
+ NULL, 'BILL:Ezecom:EZ12345678',          25.0000, 'USD', 'COMPLETED',
+ 'BIL8P4V7Z2CD', 'Bill payment to Ezecom', now() - INTERVAL '2 days');
+
+-- --------------------------------------------------------- bill payments (US-039/US-042)
+-- GET /bill-payments and GET /bill-payments/{id} both render empty without these.
+--
+-- Two invariants worth keeping if you edit these rows:
+--   * reference is shared with the transfer above — BillPaymentServiceImpl passes
+--     transfer.getReference() straight into the BillPayment, and both columns are
+--     UNIQUE VARCHAR(35).
+--   * currency is the source account's, because the service reads source.getCurrency().
+--     Sophea's KHR checking pays PPWSA in KHR.
+-- bill_account_number also satisfies each provider's seeded account_number_pattern.
+-- Nothing enforces that at runtime today, but a demo row the app's own pattern
+-- rejects is a trap for whoever builds the US-039 screen.
+INSERT INTO bill_payments (id, user_id, provider_id, account_id, bill_account_number,
+                           amount, currency, transfer_id, reference, status, created_at) VALUES
+('ba000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001',
+ 'f0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001',
+ '100200300',     42.5000, 'USD', 'e0000000-0000-0000-0000-000000000010',
+ 'BIL2M8K4X7QA', 'COMPLETED', now() - INTERVAL '12 days'),
+('ba000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000001',
+ 'f0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000002',
+ '12345678',   68000.0000, 'KHR', 'e0000000-0000-0000-0000-000000000011',
+ 'BIL5R9T3W6NB', 'COMPLETED', now() - INTERVAL '6 days'),
+('ba000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000002',
+ 'f0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003',
+ 'EZ12345678',    25.0000, 'USD', 'e0000000-0000-0000-0000-000000000012',
+ 'BIL8P4V7Z2CD', 'COMPLETED', now() - INTERVAL '2 days');
+
+-- ----------------------------------------------- recurring bill payments (US-041)
+-- US-041 is the sprint's designated drop, so these may outlive the feature. They
+-- are cheap to keep and cost nothing if the story is cut: no other row points at
+-- them, and the delete block already removes them by user_id.
+-- One inactive row so is_active is visibly not always TRUE.
+INSERT INTO recurring_bill_payments (id, user_id, provider_id, account_id, bill_account_number,
+                                     amount, currency, frequency, next_payment_date,
+                                     is_active, created_at, updated_at) VALUES
+('bc000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001',
+ 'f0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001',
+ '100200300',    45.0000, 'USD', 'MONTHLY', current_date + 12,
+ TRUE,  now() - INTERVAL '75 days', now() - INTERVAL '12 days'),
+('bc000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000002',
+ 'f0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000003',
+ '012345678',     5.0000, 'USD', 'WEEKLY',  current_date + 3,
+ TRUE,  now() - INTERVAL '40 days', now() - INTERVAL '2 days'),
+('bc000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000003',
+ 'f0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000005',
+ '87654321', 55000.0000, 'KHR', 'MONTHLY', current_date + 20,
+ FALSE, now() - INTERVAL '65 days', now() - INTERVAL '30 days');
+
+-- ------------------------------------------------------------ notifications (US-022/US-023)
+-- The in-app list and the unread badge both read this table and both render
+-- empty on a fresh database. Types are the full NotificationType enum
+-- (TRANSFER, BALANCE_ALERT, SECURITY, SYSTEM), and read is mixed so the unread
+-- filter has something to exclude.
+--
+-- Seeded only for d0000000- users: notifications hung off V2's bootstrap admin
+-- would survive every reseed, because its id is a gen_random_uuid() this script
+-- cannot predict or delete.
+INSERT INTO notifications (id, user_id, title, message, type, read, created_at) VALUES
+-- Sophea — the busiest demo login.
+('8a000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001',
+ 'Transfer sent', 'USD 100.50 sent to account 900000000003. Reference TRF7QK2M4X9A.',
+ 'TRANSFER',      FALSE, now() - INTERVAL '3 hours'),
+('8a000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000001',
+ 'Bill paid', 'USD 42.50 paid to EDC for bill account 100200300. Reference BIL2M8K4X7QA.',
+ 'TRANSFER',      FALSE, now() - INTERVAL '12 days'),
+('8a000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000001',
+ 'Low balance', 'Your USD savings account 900000000001 is below USD 2,000.00.',
+ 'BALANCE_ALERT', TRUE,  now() - INTERVAL '5 days'),
+('8a000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-000000000001',
+ 'New sign-in', 'Your account was signed in to from a new device.',
+ 'SECURITY',      TRUE,  now() - INTERVAL '9 days'),
+('8a000000-0000-0000-0000-000000000005', 'd0000000-0000-0000-0000-000000000001',
+ 'Scheduled maintenance', 'Online banking is unavailable Sunday 02:00-04:00.',
+ 'SYSTEM',        TRUE,  now() - INTERVAL '20 days'),
+-- Dara.
+('8a000000-0000-0000-0000-000000000006', 'd0000000-0000-0000-0000-000000000002',
+ 'Transfer received', 'USD 25.25 received from account 900000000001.',
+ 'TRANSFER',      TRUE,  now() - INTERVAL '1 hour'),
+('8a000000-0000-0000-0000-000000000007', 'd0000000-0000-0000-0000-000000000002',
+ 'Low balance', 'Your USD savings account 900000000003 is below USD 4,000.00.',
+ 'BALANCE_ALERT', FALSE, now() - INTERVAL '2 days'),
+-- Nita — pairs with her BLOCKED card below.
+('8a000000-0000-0000-0000-000000000008', 'd0000000-0000-0000-0000-000000000003',
+ 'Card blocked', 'Your card ending 9012 has been blocked. Unblock it from the app.',
+ 'SECURITY',      FALSE, now() - INTERVAL '4 days');
 
 COMMIT;

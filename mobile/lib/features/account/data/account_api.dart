@@ -4,11 +4,9 @@ import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/features/account/data/account_models.dart';
 import 'package:mobile/features/auth/data/auth_models.dart' show formatLocalDate;
 
-// One client per account-scoped endpoint (US-013 through US-021), same shape as AuthApi. Every
-// call needs the caller's access token, so it's constructed once per signed-in session (see
-// DashboardScreen) rather than per-screen.
 class AccountApi {
-  AccountApi({required String accessToken, ApiClient? client}) : _client = client ?? ApiClient(accessToken: accessToken);
+  AccountApi({String? accessToken, ApiClient? client})
+      : _client = client ?? ApiClient(accessToken: accessToken);
 
   final ApiClient _client;
 
@@ -36,6 +34,16 @@ class AccountApi {
     return _client.getBytes(
       '/accounts/$accountId/statement',
       query: {
+        if (fromDate != null) 'fromDate': formatLocalDate(fromDate),
+        if (toDate != null) 'toDate': formatLocalDate(toDate),
+      },
+    );
+  }
+
+  Future<void> emailStatement(String accountId, {DateTime? fromDate, DateTime? toDate}) {
+    return _client.post(
+      '/accounts/$accountId/statement/email',
+      {
         if (fromDate != null) 'fromDate': formatLocalDate(fromDate),
         if (toDate != null) 'toDate': formatLocalDate(toDate),
       },

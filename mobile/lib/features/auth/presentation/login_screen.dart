@@ -1,111 +1,194 @@
 import 'package:flutter/material.dart';
-
 import 'package:mobile/core/api/api_client.dart';
+import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
-import 'package:mobile/features/auth/presentation/otp_verification_screen.dart';
-import 'package:mobile/features/auth/presentation/registration_screen.dart';
+import 'package:mobile/features/auth/presentation/forgot_password_screen.dart';
+import 'package:mobile/features/auth/presentation/phone_entry_screen.dart';
 import 'package:mobile/features/auth/presentation/two_factor_screen.dart';
 
-const Map<String, String> _loginErrorMessages = {
-  'INVALID_CREDENTIALS': 'Incorrect phone number or password.',
-  'ACCOUNT_SUSPENDED': 'This account is suspended.',
-  'ACCOUNT_LOCKED': 'This account is locked.',
-};
-
-// US-009: customer login (mobile). Customers are keyed by phone (US-007 collects no email);
-// admin/staff use email instead (US-010, web-admin only). 2FA is mandatory for every account —
-// this always leads to the challenge screen, never straight into the app.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({this.initialPhone, super.key});
-
-  final String? initialPhone;
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _authApi = AuthApi();
-  late final TextEditingController _phoneController = TextEditingController(text: widget.initialPhone);
-  final _passwordController = TextEditingController();
+  final _phoneController = TextEditingController(text: '+85512000001');
+  final _passwordController = TextEditingController(text: 'CustomerPass123!');
+  bool _obscurePassword = true;
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  bool _isSubmitting = false;
-  String? _errorText;
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
+  Future<void> _handleLogin() async {
     final phone = _phoneController.text.trim();
+    final password = _passwordController.text;
+
+    if (phone.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Please enter both phone number and password');
+      return;
+    }
+
     setState(() {
-      _isSubmitting = true;
-      _errorText = null;
+      _isLoading = true;
+      _errorMessage = null;
     });
+
     try {
-      final response = await _authApi.login(phone: phone, password: _passwordController.text);
-      if (!mounted) {
-        return;
-      }
-      Navigator.of(
+      final response = await AuthApi().login(phone: phone, password: password);
+
+      if (!mounted) return;
+      Navigator.push(
         context,
-      ).push(MaterialPageRoute(builder: (_) => TwoFactorScreen(challengeToken: response.challengeToken)));
+        MaterialPageRoute(
+          builder: (_) => TwoFactorScreen(
+            phone: phone,
+            challengeToken: response.challengeToken,
+          ),
+        ),
+      );
     } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      if (e.code == 'PHONE_NOT_VERIFIED') {
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => OtpVerificationScreen(phone: phone)));
-        return;
-      }
-      setState(() => _errorText = _loginErrorMessages[e.code] ?? e.message);
+      setState(() => _errorMessage = e.message);
+    } catch (_) {
+      setState(() => _errorMessage = "Couldn't sign in. Please check your connection.");
     } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Online Banking', style: Theme.of(context).textTheme.headlineSmall, textAlign: TextAlign.center),
-              const SizedBox(height: 32),
-              TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone number'),
+    return GradientScaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 10),
+            const Text(
+              'Welcome Back',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Sign in with your registered phone number',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 28),
+
+            if (_errorMessage != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryRed.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.primaryRedLight.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: AppTheme.primaryRedLight, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: 'Password', errorText: _errorText),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Sign in'),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegistrationScreen())),
-                child: const Text("Don't have an account? Register"),
-              ),
+              const SizedBox(height: 20),
             ],
-          ),
+
+            GlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Phone Number', style: TextStyle(fontSize: 13, color: Colors.white70)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    decoration: const InputDecoration(
+                      hintText: '+855 12 345 678',
+                      prefixIcon: Icon(Icons.phone_outlined, color: Colors.white70, size: 20),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Password', style: TextStyle(fontSize: 13, color: Colors.white70)),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                        ),
+                        child: const Text(
+                          'Forgot Password?',
+                          style: TextStyle(fontSize: 12, color: AppTheme.emeraldLight, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      hintText: '••••••••',
+                      prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70, size: 20),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          color: Colors.white70,
+                          size: 20,
+                        ),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                    ),
+                    onSubmitted: (_) => _handleLogin(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            PrimaryActionButton(
+              title: 'SIGN IN',
+              isLoading: _isLoading,
+              onPressed: _handleLogin,
+            ),
+            const SizedBox(height: 24),
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Don't have an account? ", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PhoneEntryScreen()),
+                    ),
+                    child: const Text(
+                      'Open Account',
+                      style: TextStyle(color: AppTheme.emeraldLight, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

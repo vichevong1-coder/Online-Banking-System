@@ -4,6 +4,7 @@ import 'dart:typed_data' show Uint8List;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:mobile/core/session/session_manager.dart';
 
 String _resolveBaseUrl() {
   const override = String.fromEnvironment('API_BASE_URL');
@@ -26,25 +27,24 @@ class ApiException implements Exception {
   final String code;
   final String message;
   final Map<String, String>? fieldErrors;
+
+  @override
+  String toString() => message;
 }
 
-// Thin wrapper over the backend's REST endpoints. Auth endpoints (US-007/008/009/011) are all
-// POST + JSON in, JSON (or 204 empty) out. Account-scoped endpoints (US-013+) additionally need
-// an Authorization header, GET with query params, and raw bytes for the PDF statement.
 class ApiClient {
   ApiClient({http.Client? client, this.accessToken}) : _client = client ?? http.Client();
 
   final http.Client _client;
-  final String? accessToken;
+  String? accessToken;
+
+  String? get effectiveToken => accessToken ?? SessionManager.instance.accessToken;
 
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
-    if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+    if (effectiveToken != null) 'Authorization': 'Bearer $effectiveToken',
   };
 
-  // Query params are joined onto the path rather than passed as a Map<String, String> to
-  // Uri.parse(...).replace(queryParameters: ...), so callers can simply omit a key instead of
-  // needing to know that an empty-string value 400s a numeric @RequestParam like minAmount.
   Uri _uri(String path, Map<String, String>? query) {
     final uri = Uri.parse('$apiBaseUrl$path');
     if (query == null || query.isEmpty) {
@@ -53,12 +53,49 @@ class ApiClient {
     return uri.replace(queryParameters: query);
   }
 
+  Future<bool> _tryRefreshToken() async {
+    final refreshToken = SessionManager.instance.refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return false;
+    }
+
+    try {
+      final response = await _client.post(
+        _uri('/auth/refresh', null),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refreshToken': refreshToken}),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+        final newAccessToken = decoded['accessToken'] as String;
+        accessToken = newAccessToken;
+        await SessionManager.instance.updateTokens(newAccessToken);
+        return true;
+      }
+    } catch (_) {}
+
+    await SessionManager.instance.clearSession();
+    return false;
+  }
+
   Future<Map<String, dynamic>?> post(String path, Map<String, dynamic> body) async {
-    final http.Response response;
+    http.Response response;
     try {
       response = await _client.post(_uri(path, null), headers: _headers, body: jsonEncode(body));
     } catch (_) {
       throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+    }
+
+    if (response.statusCode == 401 && path != '/auth/login' && path != '/auth/refresh') {
+      final refreshed = await _tryRefreshToken();
+      if (refreshed) {
+        try {
+          response = await _client.post(_uri(path, null), headers: _headers, body: jsonEncode(body));
+        } catch (_) {
+          throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+        }
+      }
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -71,14 +108,23 @@ class ApiClient {
     throw _toApiException(response);
   }
 
-  // Returns dynamic because response shapes vary: GET /accounts is a top-level JSON array, while
-  // GET /accounts/{id}/balance and the paginated transactions endpoint are objects. Callers cast.
   Future<dynamic> get(String path, {Map<String, String>? query}) async {
-    final http.Response response;
+    http.Response response;
     try {
       response = await _client.get(_uri(path, query), headers: _headers);
     } catch (_) {
       throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+    }
+
+    if (response.statusCode == 401) {
+      final refreshed = await _tryRefreshToken();
+      if (refreshed) {
+        try {
+          response = await _client.get(_uri(path, query), headers: _headers);
+        } catch (_) {
+          throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+        }
+      }
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -91,12 +137,78 @@ class ApiClient {
     throw _toApiException(response);
   }
 
+  Future<Map<String, dynamic>?> patch(String path, Map<String, dynamic> body) async {
+    http.Response response;
+    try {
+      response = await _client.patch(_uri(path, null), headers: _headers, body: jsonEncode(body));
+    } catch (_) {
+      throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+    }
+
+    if (response.statusCode == 401) {
+      final refreshed = await _tryRefreshToken();
+      if (refreshed) {
+        try {
+          response = await _client.patch(_uri(path, null), headers: _headers, body: jsonEncode(body));
+        } catch (_) {
+          throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+        }
+      }
+    }
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) {
+        return null;
+      }
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw _toApiException(response);
+  }
+
+  Future<void> delete(String path) async {
+    http.Response response;
+    try {
+      response = await _client.delete(_uri(path, null), headers: _headers);
+    } catch (_) {
+      throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+    }
+
+    if (response.statusCode == 401) {
+      final refreshed = await _tryRefreshToken();
+      if (refreshed) {
+        try {
+          response = await _client.delete(_uri(path, null), headers: _headers);
+        } catch (_) {
+          throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+        }
+      }
+    }
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    throw _toApiException(response);
+  }
+
   Future<Uint8List> getBytes(String path, {Map<String, String>? query}) async {
-    final http.Response response;
+    http.Response response;
     try {
       response = await _client.get(_uri(path, query), headers: _headers);
     } catch (_) {
       throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+    }
+
+    if (response.statusCode == 401) {
+      final refreshed = await _tryRefreshToken();
+      if (refreshed) {
+        try {
+          response = await _client.get(_uri(path, query), headers: _headers);
+        } catch (_) {
+          throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+        }
+      }
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {

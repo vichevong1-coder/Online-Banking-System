@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -43,6 +45,7 @@ class TransferControllerTest {
     @Autowired private RecordingOtpSender otpSender;
 
     @PersistenceContext private EntityManager entityManager;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
     void transferMovesMoneyBetweenOwnAccountsAndReturnsAReceipt() throws Exception {
@@ -98,6 +101,11 @@ class TransferControllerTest {
                 .andExpect(jsonPath("$.status").value("COMPLETED"));
     }
 
+    // NOT_SUPPORTED: the US-035 notification is written by an AFTER_COMMIT listener, which
+    // never fires inside a test transaction that always rolls back. This method therefore
+    // commits for real — it registers its own customer under a phone number no other test
+    // uses, so the rows it leaves behind are inert.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Test
     void aCompletedTransferProducesANotification() throws Exception {
         // US-035 seam: the transfer service goes through the shared
@@ -105,7 +113,7 @@ class TransferControllerTest {
         String token = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-25-000-002", "correct-horse");
         String source = openAccount(token, "SAVINGS", "USD");
         String destination = openAccount(token, "CHECKING", "USD");
-        fund(source, "500.0000");
+        fundCommitted(source, "500.0000");
 
         mockMvc.perform(transferRequest(token, source, destination, "25.00", "Coffee fund"))
                 .andExpect(status().isCreated());
@@ -339,12 +347,17 @@ class TransferControllerTest {
                 .andExpect(jsonPath("$.content[0].id").value(transferId));
     }
 
+    // NOT_SUPPORTED: the US-035 notification is written by an AFTER_COMMIT listener, which
+    // never fires inside a test transaction that always rolls back. This method therefore
+    // commits for real — it registers its own customer under a phone number no other test
+    // uses, so the rows it leaves behind are inert.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Test
     void aCompletedExternalTransferProducesANotification() throws Exception {
         // US-035, interbank half of the same seam.
         String token = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-000-002", "correct-horse");
         String source = openAccount(token, "SAVINGS", "USD");
-        fund(source, "500.0000");
+        fundCommitted(source, "500.0000");
 
         mockMvc.perform(externalTransferRequest(token, source, "USD", "15.00", null))
                 .andExpect(status().isCreated());
@@ -464,6 +477,170 @@ class TransferControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    // ---------------------------------------------------------------- US-026,
+    // the same-bank half: paying another customer, named by account number.
+
+    @Test
+    void aP2pTransferPaysAnotherCustomersAccountAndWritesBothLegs() throws Exception {
+        String payerToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-100-001", "correct-horse");
+        String source = openAccount(payerToken, "CHECKING", "USD");
+        fund(source, "500.0000");
+
+        String payeeToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-100-002", "correct-horse");
+        String payeeAccount = openAccount(payeeToken, "SAVINGS", "USD");
+        String payeeAccountNumber = accountNumberOf(payeeToken, payeeAccount);
+
+        MvcResult result = mockMvc.perform(p2pTransferRequest(payerToken, source, payeeAccountNumber, "80.00", "Split dinner"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.amount").value(80.00))
+                .andExpect(jsonPath("$.fromAccountId").value(source))
+                .andExpect(jsonPath("$.toAccountId").value(payeeAccount))
+                .andExpect(jsonPath("$.toAccountNumber").value(payeeAccountNumber))
+                .andExpect(jsonPath("$.externalRef").doesNotExist())
+                .andReturn();
+        String transferId = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(get("/accounts/" + source + "/balance").header(HttpHeaders.AUTHORIZATION, "Bearer " + payerToken))
+                .andExpect(jsonPath("$.balance").value(420.00));
+        // The money actually landed in the other customer's account.
+        mockMvc.perform(
+                        get("/accounts/" + payeeAccount + "/balance")
+                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + payeeToken))
+                .andExpect(jsonPath("$.balance").value(80.00));
+
+        assertLegCountForTransfer(transferId, 2);
+
+        // US-028: both sides can pull the receipt, because both own a leg.
+        mockMvc.perform(get("/transfers/" + transferId).header(HttpHeaders.AUTHORIZATION, "Bearer " + payeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.amount").value(80.00));
+    }
+
+    @Test
+    void aP2pTransferToAnUnknownAccountNumberReturnsNotFound() throws Exception {
+        String token = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-100-003", "correct-horse");
+        String source = openAccount(token, "CHECKING", "USD");
+        fund(source, "500.0000");
+
+        mockMvc.perform(p2pTransferRequest(token, source, "999999999999", "10.00", null))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("ACCOUNT_NOT_FOUND"));
+
+        mockMvc.perform(get("/accounts/" + source + "/balance").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(jsonPath("$.balance").value(500.00));
+    }
+
+    @Test
+    void aP2pTransferToYourOwnAccountNumberIsRejected() throws Exception {
+        String token = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-100-004", "correct-horse");
+        String source = openAccount(token, "CHECKING", "USD");
+        fund(source, "500.0000");
+
+        mockMvc.perform(p2pTransferRequest(token, source, accountNumberOf(token, source), "10.00", null))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("SAME_ACCOUNT_TRANSFER"));
+    }
+
+    @Test
+    void aP2pTransferAcrossCurrenciesIsRejectedRatherThanConverted() throws Exception {
+        String payerToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-100-005", "correct-horse");
+        String source = openAccount(payerToken, "CHECKING", "USD");
+        fund(source, "500.0000");
+
+        String payeeToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-100-006", "correct-horse");
+        String khrAccount = openAccount(payeeToken, "SAVINGS", "KHR");
+
+        mockMvc.perform(p2pTransferRequest(payerToken, source, accountNumberOf(payeeToken, khrAccount), "10.00", null))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("CURRENCY_MISMATCH"));
+    }
+
+    @Test
+    void aP2pTransferFromAnAccountYouDoNotOwnReturnsNotFound() throws Exception {
+        String ownerToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-100-007", "correct-horse");
+        String othersAccount = openAccount(ownerToken, "SAVINGS", "USD");
+        fund(othersAccount, "500.0000");
+
+        String intruderToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-100-008", "correct-horse");
+        String intruderAccount = openAccount(intruderToken, "CHECKING", "USD");
+
+        // Pulling money out of someone else's account: 404, not 403.
+        mockMvc.perform(p2pTransferRequest(
+                        intruderToken, othersAccount, accountNumberOf(intruderToken, intruderAccount), "10.00", null))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("ACCOUNT_NOT_FOUND"));
+
+        mockMvc.perform(
+                        get("/accounts/" + othersAccount + "/balance")
+                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken))
+                .andExpect(jsonPath("$.balance").value(500.00));
+    }
+
+    @Test
+    void aP2pTransferOverTheAvailableBalanceIsRejected() throws Exception {
+        String payerToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-100-009", "correct-horse");
+        String source = openAccount(payerToken, "CHECKING", "USD");
+        fund(source, "20.0000");
+
+        String payeeToken = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-100-010", "correct-horse");
+        String payeeAccount = openAccount(payeeToken, "SAVINGS", "USD");
+
+        mockMvc.perform(p2pTransferRequest(payerToken, source, accountNumberOf(payeeToken, payeeAccount), "50.00", null))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INSUFFICIENT_FUNDS"));
+    }
+
+    @Test
+    void aP2pTransferWithAMalformedDestinationFailsValidation() throws Exception {
+        String token = registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-26-100-011", "correct-horse");
+
+        mockMvc.perform(
+                        post("/transfers/p2p")
+                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(("{\"fromAccountId\": \"%s\", \"toAccountNumber\": \"nope\","
+                                                + " \"amount\": 0}")
+                                        .formatted(UUID.randomUUID())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.fieldErrors.toAccountNumber").exists())
+                .andExpect(jsonPath("$.fieldErrors.amount").exists());
+    }
+
+    @Test
+    void theP2pTransferEndpointIsRejectedWithoutAToken() throws Exception {
+        mockMvc.perform(
+                        post("/transfers/p2p")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"fromAccountId\": \"%s\"}".formatted(UUID.randomUUID())))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder p2pTransferRequest(
+            String token, String fromAccountId, String toAccountNumber, String amount, String description) {
+        String body = ("{\"fromAccountId\": \"%s\", \"toAccountNumber\": \"%s\", \"amount\": %s%s}")
+                .formatted(
+                        fromAccountId,
+                        toAccountNumber,
+                        amount,
+                        description == null ? "" : ", \"description\": \"%s\"".formatted(description));
+        return post("/transfers/p2p")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body);
+    }
+
+    private String accountNumberOf(String token, String accountId) throws Exception {
+        MvcResult result = mockMvc.perform(get("/accounts").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+        java.util.List<String> numbers = JsonPath.read(
+                result.getResponse().getContentAsString(),
+                "$[?(@.id == '%s')].accountNumber".formatted(accountId));
+        return numbers.get(0);
+    }
+
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder externalTransferRequest(
             String token, String fromAccountId, String currency, String amount, String description) {
         String body = ("{\"fromAccountId\": \"%s\", \"beneficiaryBankCode\": \"ABCDKHPP\","
@@ -534,5 +711,15 @@ class TransferControllerTest {
                 .setParameter("transferId", UUID.fromString(transferId))
                 .getSingleResult();
         org.assertj.core.api.Assertions.assertThat(legs.intValue()).isEqualTo(expectedLegs);
+    }
+
+    /**
+     * fund()'s counterpart for the NOT_SUPPORTED tests below: with no transaction active
+     * there is nothing to flush and no JPA cache to clear, and JdbcTemplate auto-commits so
+     * the balance is visible to the request thread.
+     */
+    private void fundCommitted(String accountId, String balance) {
+        jdbcTemplate.update(
+                "UPDATE accounts SET balance = ? WHERE id = ?", new BigDecimal(balance), UUID.fromString(accountId));
     }
 }

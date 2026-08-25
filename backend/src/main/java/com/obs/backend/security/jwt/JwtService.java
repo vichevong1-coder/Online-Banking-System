@@ -32,6 +32,7 @@ public class JwtService {
 
     public String generateAccessToken(String subject, Set<Role> roles) {
         Instant now = Instant.now();
+        @SuppressWarnings("null")
         List<String> roleNames = roles.stream().map(Role::name).toList();
         return Jwts.builder()
                 .subject(subject)
@@ -90,6 +91,7 @@ public class JwtService {
      * Returns the subject of a signature-valid, unexpired CHALLENGE token — the short-lived
      * token issued by /auth/login that a client exchanges for real tokens at /auth/2fa/verify.
      */
+    @SuppressWarnings("null")
     public Optional<String> resolveChallengeSubject(String token) {
         return parseIfType(token, JwtTokenType.CHALLENGE).map(Claims::getSubject);
     }
@@ -98,6 +100,7 @@ public class JwtService {
      * Returns the subject of a signature-valid, unexpired REFRESH token — used by /auth/refresh
      * to reissue an access token.
      */
+    @SuppressWarnings("null")
     public Optional<String> resolveRefreshSubject(String token) {
         return parseIfType(token, JwtTokenType.REFRESH).map(Claims::getSubject);
     }

@@ -4,6 +4,7 @@ import com.obs.backend.common.dto.PageResponse;
 import com.obs.backend.feature.notification.dto.NotificationResponse;
 import com.obs.backend.feature.notification.entity.Notification;
 import com.obs.backend.feature.notification.entity.NotificationType;
+import com.obs.backend.feature.notification.exception.NotificationNotFoundException;
 import com.obs.backend.feature.notification.repository.NotificationRepository;
 import com.obs.backend.feature.notification.service.NotificationSender;
 import com.obs.backend.feature.notification.service.NotificationService;
@@ -44,7 +45,14 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public void markAsRead(UUID userId, UUID notificationId) {
-        notificationRepository.findByIdAndUserId(notificationId, userId).ifPresent(Notification::markAsRead);
+        // orElseThrow, not ifPresent: silently succeeding on an id that does not exist (or
+        // belongs to somebody else) reported 204 for a no-op. The lookup is already scoped to
+        // the caller, so another customer's notification is indistinguishable from a missing
+        // one — the Sprint 2 404-not-403 rule rather than a leak.
+        notificationRepository
+                .findByIdAndUserId(notificationId, userId)
+                .orElseThrow(NotificationNotFoundException::new)
+                .markAsRead();
     }
 
     @Override

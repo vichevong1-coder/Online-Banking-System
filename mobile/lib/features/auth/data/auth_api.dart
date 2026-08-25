@@ -1,9 +1,6 @@
 import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/features/auth/data/auth_models.dart';
 
-// One client per auth endpoint (US-007/008/009/011) — thin wrappers, no business logic here
-// beyond request/response shape, per CLAUDE.md's "no business logic in widgets" (this isn't a
-// widget either, but the same rule keeps screens from talking to ApiClient directly).
 class AuthApi {
   AuthApi({ApiClient? client}) : _client = client ?? ApiClient();
 
@@ -34,4 +31,37 @@ class AuthApi {
     final json = await _client.post('/auth/2fa/resend', {'challengeToken': challengeToken});
     return LoginResponse.fromJson(json!);
   }
+
+  Future<void> forgotPassword(String identifier) =>
+      _client.post('/auth/password/forgot', {'identifier': identifier});
+
+  Future<void> resetPassword({
+    required String identifier,
+    required String code,
+    required String newPassword,
+  }) =>
+      _client.post('/auth/password/reset', {
+        'identifier': identifier,
+        'code': code,
+        'newPassword': newPassword,
+      });
+
+  Future<UserProfile> getProfile() async {
+    final json = await _client.get('/me');
+    return UserProfile.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<UserProfile> updateProfile({required String email}) async {
+    final json = await _client.patch('/me', {'email': email});
+    return UserProfile.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) =>
+      _client.post('/me/password', {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      });
 }

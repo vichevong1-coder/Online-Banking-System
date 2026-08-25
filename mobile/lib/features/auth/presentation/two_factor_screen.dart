@@ -1,197 +1,252 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
-
 import 'package:mobile/core/api/api_client.dart';
-import 'package:mobile/features/account/presentation/dashboard_screen.dart';
+import 'package:mobile/core/session/session_manager.dart';
+import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/jwt.dart';
 
-const Map<String, String> _twoFactorErrorMessages = {
-  'INVALID_OR_EXPIRED_OTP': 'That code is incorrect or has expired.',
-  'INVALID_OR_EXPIRED_CHALLENGE': 'Your session expired. Please sign in again.',
-};
-
-// A resend has no backend rate limit — this is purely a client-side guard against
-// double-taps / impatient re-sends, same as web-admin's TwoFactorPage.
-const _resendCooldownSeconds = 30;
-
-// US-011: 2FA challenge (customer). Mirrors web-admin's TwoFactorPage (US-012, admin) exactly —
-// same countdown-from-the-token-expiry + resend pattern, same mandatory-for-every-account 2FA.
 class TwoFactorScreen extends StatefulWidget {
-  const TwoFactorScreen({required this.challengeToken, super.key});
-
+  final String phone;
   final String challengeToken;
+
+  const TwoFactorScreen({
+    super.key,
+    required this.phone,
+    required this.challengeToken,
+  });
 
   @override
   State<TwoFactorScreen> createState() => _TwoFactorScreenState();
 }
 
 class _TwoFactorScreenState extends State<TwoFactorScreen> {
-  final _authApi = AuthApi();
-  final _codeController = TextEditingController();
-
-  late String _challengeToken = widget.challengeToken;
-  Timer? _countdownTimer;
-  Timer? _cooldownTimer;
-  Duration _remaining = Duration.zero;
-  int _resendCooldown = 0;
-
-  bool _isSubmitting = false;
+  final TextEditingController _codeController = TextEditingController();
+  late String _currentChallengeToken;
+  bool _isLoading = false;
   bool _isResending = false;
-  String? _errorText;
+  String? _errorMessage;
+  int _secondsRemaining = 300;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _startCountdown();
+    _currentChallengeToken = widget.challengeToken;
+    _initCountdown();
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _codeController.dispose();
-    _countdownTimer?.cancel();
-    _cooldownTimer?.cancel();
     super.dispose();
   }
 
-  void _startCountdown() {
-    _countdownTimer?.cancel();
-    final expiresAt = decodeJwtExpiry(_challengeToken);
-    if (expiresAt == null) {
+  void _initCountdown() {
+    final exp = decodeJwtExpiry(_currentChallengeToken);
+    if (exp != null) {
+      final diff = (exp.millisecondsSinceEpoch - DateTime.now().millisecondsSinceEpoch) ~/ 1000;
+      _secondsRemaining = diff > 0 ? diff : 0;
+    } else {
+      _secondsRemaining = 300;
+    }
+
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() => _secondsRemaining--);
+      } else {
+        _timer?.cancel();
+      }
+    });
+  }
+
+  Future<void> _verify2Fa() async {
+    final code = _codeController.text.trim();
+    if (code.length != 6) {
+      setState(() => _errorMessage = 'Please enter a 6-digit code');
       return;
     }
-    void tick() {
-      final remaining = expiresAt.difference(DateTime.now());
-      setState(() => _remaining = remaining.isNegative ? Duration.zero : remaining);
-    }
 
-    tick();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) => tick());
-  }
-
-  bool get _isExpired => _remaining == Duration.zero;
-
-  Future<void> _verify() async {
     setState(() {
-      _isSubmitting = true;
-      _errorText = null;
+      _isLoading = true;
+      _errorMessage = null;
     });
+
     try {
-      final tokens = await _authApi.verifyTwoFactor(challengeToken: _challengeToken, code: _codeController.text.trim());
-      if (!mounted) {
-        return;
-      }
-      Navigator.of(
-        context,
-      ).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => DashboardScreen(tokens: tokens)), (_) => false);
+      final tokens = await AuthApi().verifyTwoFactor(
+        challengeToken: _currentChallengeToken,
+        code: code,
+      );
+
+      await SessionManager.instance.saveSession(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        userId: tokens.userId,
+        firstName: tokens.firstName,
+        lastName: tokens.lastName,
+        phone: widget.phone,
+      );
+      // No manual navigation needed — the ListenableBuilder in app.dart
+      // automatically rebuilds to MainDashboardScreen when isAuthenticated
+      // becomes true after saveSession() calls notifyListeners().
     } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      if (e.code == 'INVALID_OR_EXPIRED_CHALLENGE') {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-        return;
-      }
-      setState(() => _errorText = _twoFactorErrorMessages[e.code] ?? e.message);
+      setState(() => _errorMessage = e.message);
+    } catch (_) {
+      setState(() => _errorMessage = "Couldn't verify 2FA. Please try again.");
     } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _resend() async {
-    setState(() => _isResending = true);
+  Future<void> _resendCode() async {
+    setState(() {
+      _isResending = true;
+      _errorMessage = null;
+    });
+
     try {
-      final response = await _authApi.resendTwoFactor(challengeToken: _challengeToken);
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _challengeToken = response.challengeToken;
-        _resendCooldown = _resendCooldownSeconds;
-      });
-      _startCountdown();
-      _cooldownTimer?.cancel();
-      _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-        setState(() => _resendCooldown = _resendCooldown > 0 ? _resendCooldown - 1 : 0);
-        if (_resendCooldown == 0) {
-          _cooldownTimer?.cancel();
-        }
-      });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A new code is on its way.')));
+      final response = await AuthApi().resendTwoFactor(challengeToken: _currentChallengeToken);
+      _currentChallengeToken = response.challengeToken;
+      _initCountdown();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A fresh 2FA code has been sent.')),
+      );
     } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      if (e.code == 'INVALID_OR_EXPIRED_CHALLENGE') {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      setState(() => _errorMessage = e.message);
+    } catch (_) {
+      setState(() => _errorMessage = "Couldn't resend 2FA code.");
     } finally {
-      if (mounted) {
-        setState(() => _isResending = false);
-      }
+      if (mounted) setState(() => _isResending = false);
     }
   }
 
-  String _formatCountdown(Duration duration) {
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  String _formatTime(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Two-factor verification')),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text('We sent a 6-digit code by SMS to the phone number on file.'),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _codeController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                enabled: !_isExpired,
-                decoration: InputDecoration(labelText: 'Verification code', errorText: _errorText),
+    return GradientScaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Two-Factor Authentication', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 10),
+            const Text(
+              'Security Verification',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please enter the 6-digit authentication code sent to\n${widget.phone}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: Colors.white70, height: 1.4),
+            ),
+            const SizedBox(height: 32),
+
+            if (_errorMessage != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryRed.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.primaryRedLight.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: AppTheme.primaryRedLight, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              const SizedBox(height: 20),
+            ],
+
+            GlassCard(
+              child: Column(
                 children: [
-                  Text(
-                    _isExpired ? 'Code expired.' : 'Expires in ${_formatCountdown(_remaining)}',
-                    style: TextStyle(
-                      color: _isExpired ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.outline,
+                  TextField(
+                    controller: _codeController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    maxLength: 6,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 10,
+                      color: Colors.white,
                     ),
-                  ),
-                  TextButton(
-                    onPressed: _isResending || _resendCooldown > 0 ? null : _resend,
-                    child: Text(
-                      _isResending
-                          ? 'Sending...'
-                          : _resendCooldown > 0
-                          ? 'Resend code (${_resendCooldown}s)'
-                          : 'Resend code',
+                    decoration: const InputDecoration(
+                      hintText: '••••••',
+                      counterText: '',
+                      hintStyle: TextStyle(letterSpacing: 10, color: Colors.white38),
                     ),
+                    onSubmitted: (_) => _verify2Fa(),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _isSubmitting || _isExpired ? null : _verify,
-                child: _isSubmitting
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Verify'),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.timer_outlined,
+                  size: 16,
+                  color: _secondsRemaining > 0 ? Colors.white70 : AppTheme.primaryRedLight,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _secondsRemaining > 0
+                      ? 'Code expires in ${_formatTime(_secondsRemaining)}'
+                      : 'Code expired. Request a new one.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _secondsRemaining > 0 ? Colors.white70 : AppTheme.primaryRedLight,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: _isResending ? null : _resendCode,
+              child: Text(
+                _isResending ? 'Resending…' : 'Resend 2FA Code',
+                style: const TextStyle(
+                  color: AppTheme.emeraldLight,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 36),
+            PrimaryActionButton(
+              title: 'VERIFY & SIGN IN',
+              isLoading: _isLoading,
+              onPressed: _verify2Fa,
+            ),
+          ],
         ),
       ),
     );

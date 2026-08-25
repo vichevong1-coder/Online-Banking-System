@@ -25,6 +25,8 @@ mobile/ios/Pods/
 mobile/ios/.symlinks/
 mobile/ios/Flutter/Flutter.framework
 mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
 mobile/**/generated_plugin_registrant.dart
 *.g.dart
 *.freezed.dart

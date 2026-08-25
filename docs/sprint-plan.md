@@ -288,7 +288,10 @@ up to the backend by delivering the money-movement screens whose APIs shipped in
 
 ### User Stories — mobile (money movement, one sprint behind its backend)
 - **US-025** Fund transfer – between own accounts `[Flutter]`
-- **US-026** Fund transfer – to other bank accounts `[Flutter]`
+- **US-026** Fund transfer – to someone else's account `[Flutter]` `[BE]` — two halves: another
+  customer of this bank (`POST /transfers/p2p`, added in Sprint 5 because Sprint 4's
+  `POST /transfers` requires both accounts to be the caller's) and another bank
+  (`POST /transfers/external`, shipped Sprint 4)
 - **US-028** Fund transfer – confirmation & receipt `[Flutter]`
 - **US-029** Beneficiary management – add beneficiary `[Flutter]`
 - **US-030** Beneficiary management – edit / delete beneficiary `[Flutter]`

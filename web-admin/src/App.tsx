@@ -4,6 +4,7 @@ import { Toaster } from "sonner"
 import { AuthProvider } from "@/features/auth/auth-context"
 import { LoginPage } from "@/features/auth/LoginPage"
 import { TwoFactorPage } from "@/features/auth/TwoFactorPage"
+import { BillProvidersPage } from "@/features/bill-providers/BillProvidersPage"
 import { CustomersPage } from "@/features/customers/CustomersPage"
 import { RolesPage } from "@/features/roles/RolesPage"
 import { SettingsPage } from "@/features/settings/SettingsPage"
@@ -24,6 +25,7 @@ function App() {
               <Route path="/" element={<OverviewPage />} />
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/transfers" element={<TransfersPage />} />
+              <Route path="/bill-providers" element={<BillProvidersPage />} />
               <Route path="/roles" element={<RolesPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>

@@ -6,8 +6,6 @@ enum Gender {
   String toJson() => this == Gender.male ? 'MALE' : 'FEMALE';
 }
 
-// Java LocalDate wants exactly yyyy-MM-dd — DateTime.toIso8601String() includes a time
-// component Jackson will reject, so this is formatted by hand.
 String formatLocalDate(DateTime date) {
   final year = date.year.toString().padLeft(4, '0');
   final month = date.month.toString().padLeft(2, '0');
@@ -49,8 +47,7 @@ class RegisterRequest {
   };
 }
 
-// Backend: com.obs.backend.feature.auth.dto.LoginResponse (US-009). 2FA is mandatory — login
-// never returns real tokens directly, only a short-lived challenge token.
+// Backend: com.obs.backend.feature.auth.dto.LoginResponse (US-009).
 class LoginResponse {
   LoginResponse({required this.challengeToken});
 
@@ -88,5 +85,53 @@ class AuthTokenResponse {
     firstName: json['firstName'] as String,
     lastName: json['lastName'] as String,
     role: json['role'] as String,
+  );
+}
+
+// Backend: com.obs.backend.feature.user.dto.UserProfileResponse (US-036).
+class UserProfile {
+  UserProfile({
+    required this.id,
+    required this.firstName,
+    required this.lastName,
+    required this.phone,
+    this.email,
+    required this.nidNumber,
+    required this.nidExpiryDate,
+    required this.dateOfBirth,
+    required this.gender,
+    required this.role,
+    required this.status,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String firstName;
+  final String lastName;
+  final String phone;
+  final String? email;
+  final String nidNumber;
+  final String nidExpiryDate;
+  final String dateOfBirth;
+  final String gender;
+  final String role;
+  final String status;
+  final String createdAt;
+
+  String get fullName => '$firstName $lastName';
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
+    id: json['id'] as String,
+    firstName: json['firstName'] as String,
+    lastName: json['lastName'] as String,
+    phone: json['phone'] as String,
+    email: json['email'] as String?,
+    nidNumber: json['nidNumber'] as String? ?? '',
+    nidExpiryDate: json['nidExpiryDate'] as String? ?? '',
+    dateOfBirth: json['dateOfBirth'] as String? ?? '',
+    gender: json['gender'] as String? ?? '',
+    role: json['role'] as String? ?? 'CUSTOMER',
+    status: json['status'] as String? ?? 'ACTIVE',
+    createdAt: json['createdAt'] as String? ?? '',
   );
 }

@@ -135,6 +135,10 @@ public class User {
         this.status = newStatus;
     }
 
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
     }

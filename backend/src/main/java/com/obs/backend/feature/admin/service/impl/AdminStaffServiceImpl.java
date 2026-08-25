@@ -10,7 +10,6 @@ import com.obs.backend.feature.admin.service.AdminStaffService;
 import com.obs.backend.feature.auth.exception.PhoneAlreadyRegisteredException;
 import com.obs.backend.feature.user.entity.User;
 import com.obs.backend.feature.user.repository.UserRepository;
-import com.obs.backend.security.AccountStatus;
 import com.obs.backend.security.Role;
 import java.util.List;
 import java.util.UUID;

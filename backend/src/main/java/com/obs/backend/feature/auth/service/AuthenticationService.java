@@ -1,10 +1,12 @@
 package com.obs.backend.feature.auth.service;
 
 import com.obs.backend.feature.auth.dto.AuthTokenResponse;
+import com.obs.backend.feature.auth.dto.ForgotPasswordRequest;
 import com.obs.backend.feature.auth.dto.LoginRequest;
 import com.obs.backend.feature.auth.dto.LoginResponse;
 import com.obs.backend.feature.auth.dto.RefreshRequest;
 import com.obs.backend.feature.auth.dto.RefreshResponse;
+import com.obs.backend.feature.auth.dto.ResetPasswordRequest;
 import com.obs.backend.feature.auth.dto.TwoFactorResendRequest;
 import com.obs.backend.feature.auth.dto.TwoFactorVerifyRequest;
 
@@ -18,4 +20,8 @@ public interface AuthenticationService {
     LoginResponse resendTwoFactor(TwoFactorResendRequest request);
 
     RefreshResponse refresh(RefreshRequest request);
+
+    void forgotPassword(ForgotPasswordRequest request);
+
+    void resetPassword(ResetPasswordRequest request);
 }

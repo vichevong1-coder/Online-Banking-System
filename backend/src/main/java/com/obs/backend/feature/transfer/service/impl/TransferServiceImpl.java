@@ -8,6 +8,7 @@ import com.obs.backend.feature.account.exception.AccountNotFoundException;
 import com.obs.backend.feature.account.repository.AccountRepository;
 import com.obs.backend.feature.account.repository.TransactionRepository;
 import com.obs.backend.feature.transfer.dto.CreateExternalTransferRequest;
+import com.obs.backend.feature.transfer.dto.CreateP2pTransferRequest;
 import com.obs.backend.feature.transfer.dto.CreateTransferRequest;
 import com.obs.backend.feature.transfer.dto.TransferResponse;
 import com.obs.backend.feature.transfer.entity.Transfer;
@@ -60,10 +61,9 @@ public class TransferServiceImpl implements TransferService {
     }
 
     /**
-     * US-025. One transaction writes the transfer row and both ledger legs
-     * together — a transfer that left only one leg behind would be a ledger that
-     * does not balance, and US-050/US-053 both read the transfer row expecting
-     * its legs to exist.
+     * US-025. Both ends must be the caller's; paying someone else's account at
+     * this bank is {@link #transferToAccountNumber}. Settlement itself is shared
+     * — see {@link #settleInternal}.
      */
     @Override
     @Transactional
@@ -73,6 +73,54 @@ public class TransferServiceImpl implements TransferService {
         Account source = findOwnedAccount(userId, request.fromAccountId());
         Account destination = findOwnedAccount(userId, request.toAccountId());
 
+        return settleInternal(userId, source, destination, request.amount(), request.description(), true);
+    }
+
+    /**
+     * US-026, the same-bank half: money to another customer's account, named by
+     * the account number they gave out.
+     *
+     * <p>Only the <em>source</em> is owner-scoped. The destination deliberately
+     * is not — that is the whole point of paying someone else — which is why it
+     * is resolved by account number and never by id: an id is not something a
+     * payer can know, and accepting one would turn this into an existence oracle
+     * for account ids. An unknown number is the same {@code 404
+     * ACCOUNT_NOT_FOUND} an unowned account gives, so neither answer tells the
+     * caller anything about accounts that are not theirs.
+     *
+     * <p>Settlement, limits, currency and the ledger legs are US-025's, unchanged
+     * — a payment to another person is an internal transfer with someone else on
+     * the receiving end, not a different kind of movement.
+     */
+    @Override
+    @Transactional
+    public TransferResponse transferToAccountNumber(UUID userId, CreateP2pTransferRequest request) {
+        Account source = findOwnedAccount(userId, request.fromAccountId());
+        Account destination = accountRepository
+                .findByAccountNumber(request.toAccountNumber())
+                .orElseThrow(AccountNotFoundException::new);
+
+        return settleInternal(userId, source, destination, request.amount(), request.description(), false);
+    }
+
+    /**
+     * The shared settlement path for every transfer with both legs inside this
+     * bank — US-025's own-accounts move and US-026's payment to another customer.
+     * One transaction writes the transfer row and both ledger legs together: a
+     * transfer that left only one leg behind would be a ledger that does not
+     * balance, and US-050/US-053 both read the transfer row expecting its legs to
+     * exist.
+     *
+     * @param ownAccounts whether both ends belong to the caller — it changes only
+     *     the wording of the US-035 notification, never the money.
+     */
+    private TransferResponse settleInternal(
+            UUID userId,
+            Account source,
+            Account destination,
+            BigDecimal requestedAmount,
+            String description,
+            boolean ownAccounts) {
         if (source.getId().equals(destination.getId())) {
             throw new SameAccountTransferException();
         }
@@ -81,9 +129,9 @@ public class TransferServiceImpl implements TransferService {
             throw new CurrencyMismatchException();
         }
 
-        BigDecimal amount = request.amount().setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
-        // US-027, shared with US-026 and the QR path so there is one set of caps
-        // and one place they are enforced.
+        BigDecimal amount = requestedAmount.setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
+        // US-027, shared with US-026's interbank path and the QR path so there is
+        // one set of caps and one place they are enforced.
         transferSupport.checkLimitsAndFunds(userId, source, amount);
 
         Transfer transfer = Transfer.internal(
@@ -92,7 +140,7 @@ public class TransferServiceImpl implements TransferService {
                 amount,
                 source.getCurrency(),
                 transferSupport.generateReference(),
-                request.description());
+                description);
         // saveAndFlush, not save: createdAt is a @CreationTimestamp and is only
         // populated once Hibernate issues the INSERT, so the receipt returned
         // below would otherwise carry a null createdAt. It also gives the legs a
@@ -104,7 +152,6 @@ public class TransferServiceImpl implements TransferService {
         accountRepository.save(source);
         accountRepository.save(destination);
 
-        String description = request.description();
         transactionRepository.save(new Transaction(
                 source.getId(),
                 TransactionType.TRANSFER_OUT,
@@ -124,7 +171,9 @@ public class TransferServiceImpl implements TransferService {
 
         transferSupport.notifyTransferCompleted(
                 userId,
-                "%s %s moved from account %s to account %s. Reference %s."
+                (ownAccounts
+                                ? "%s %s moved from account %s to account %s. Reference %s."
+                                : "%s %s sent from account %s to account %s. Reference %s.")
                         .formatted(
                                 source.getCurrency(),
                                 amount.toPlainString(),

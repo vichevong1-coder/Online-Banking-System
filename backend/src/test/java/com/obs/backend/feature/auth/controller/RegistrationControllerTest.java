@@ -94,6 +94,46 @@ class RegistrationControllerTest {
     }
 
     @Test
+    void rejectsANidNumberThatIsNotExactlyNineDigits() throws Exception {
+        String tooShort = VALID_BODY.replace("\"nidNumber\": \"123456789\"", "\"nidNumber\": \"12345\"");
+        mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(tooShort))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.nidNumber").value("must be exactly 9 digits"));
+
+        String nonNumeric = VALID_BODY.replace("\"nidNumber\": \"123456789\"", "\"nidNumber\": \"12345678A\"");
+        mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(nonNumeric))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.nidNumber").value("must be exactly 9 digits"));
+    }
+
+    @Test
+    void rejectsAMalformedPhoneNumber() throws Exception {
+        String tooLong = VALID_BODY.replace(
+                "\"phone\": \"+855-12-345-678\"", "\"phone\": \"+855-12-345-678-000-111-222-333-444\"");
+        mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(tooLong))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.phone").value("must be a valid phone number"));
+
+        String withLetters =
+                VALID_BODY.replace("\"phone\": \"+855-12-345-678\"", "\"phone\": \"+855-12-ABC-678\"");
+        mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(withLetters))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.phone").value("must be a valid phone number"));
+    }
+
+    @Test
+    void rejectsAPhoneNumberLongerThanTheColumn() throws Exception {
+        // 31 characters: one over the phone VARCHAR(30) column, so it must fail validation
+        // rather than reach the database and blow up as a 500.
+        String thirtyOne = "+" + "8".repeat(30);
+        assertThat(thirtyOne).hasSize(31);
+        String tooLong = VALID_BODY.replace("\"phone\": \"+855-12-345-678\"", "\"phone\": \"" + thirtyOne + "\"");
+        mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(tooLong))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.phone").value("must be a valid phone number"));
+    }
+
+    @Test
     void persistsTheExpectedDefaultsForANewCustomer() throws Exception {
         mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(VALID_BODY))
                 .andExpect(status().isCreated());

@@ -2,6 +2,7 @@ package com.obs.backend.feature.transfer.service;
 
 import com.obs.backend.common.dto.PageResponse;
 import com.obs.backend.feature.transfer.dto.CreateExternalTransferRequest;
+import com.obs.backend.feature.transfer.dto.CreateP2pTransferRequest;
 import com.obs.backend.feature.transfer.dto.CreateTransferRequest;
 import com.obs.backend.feature.transfer.dto.TransferResponse;
 import java.util.UUID;
@@ -11,6 +12,9 @@ public interface TransferService {
 
     /** US-025: moves money between two accounts the caller owns. */
     TransferResponse transfer(UUID userId, CreateTransferRequest request);
+
+    /** US-026: moves money to another customer's account at this bank, named by account number. */
+    TransferResponse transferToAccountNumber(UUID userId, CreateP2pTransferRequest request);
 
     /** US-026: moves money out to an account at another bank, with simulated settlement. */
     TransferResponse transferExternal(UUID userId, CreateExternalTransferRequest request);

@@ -2,8 +2,7 @@ package com.obs.backend.feature.transfer.service;
 
 import com.obs.backend.feature.account.entity.Account;
 import com.obs.backend.feature.account.repository.AccountRepository;
-import com.obs.backend.feature.notification.entity.NotificationType;
-import com.obs.backend.feature.notification.service.NotificationService;
+import com.obs.backend.feature.transfer.event.TransferCompletedEvent;
 import com.obs.backend.feature.transfer.config.TransferLimitProperties;
 import com.obs.backend.feature.transfer.config.TransferLimitProperties.CurrencyLimits;
 import com.obs.backend.feature.transfer.entity.TransferStatus;
@@ -19,8 +18,7 @@ import java.security.SecureRandom;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /**
@@ -35,8 +33,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class TransferSupport {
 
-    private static final Logger log = LoggerFactory.getLogger(TransferSupport.class);
-
     private static final String REFERENCE_PREFIX = "TRF-";
     private static final int REFERENCE_BODY_LENGTH = 8;
     // Crockford-ish: no I, L, O, U, so a reference read aloud off a receipt can't
@@ -45,18 +41,18 @@ public class TransferSupport {
 
     private final AccountRepository accountRepository;
     private final TransferRepository transferRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final TransferLimitProperties transferLimits;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public TransferSupport(
             AccountRepository accountRepository,
             TransferRepository transferRepository,
-            NotificationService notificationService,
+            ApplicationEventPublisher eventPublisher,
             TransferLimitProperties transferLimits) {
         this.accountRepository = accountRepository;
         this.transferRepository = transferRepository;
-        this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
         this.transferLimits = transferLimits;
     }
 
@@ -88,16 +84,13 @@ public class TransferSupport {
      * US-035, for every path: the shared Sprint 3 NotificationService, not a
      * parallel path of its own.
      *
-     * <p>Swallowed and logged rather than propagated — the money has already
-     * moved by the time this runs, and failing the transfer because the customer
-     * could not be told about it would be the worse outcome of the two.
+     * <p>Handled after this transaction commits, not inside it — see
+     * {@code TransferCompletedNotificationListener} for why. Note the listener only runs if
+     * a transaction is active when this is called; every caller is a @Transactional service
+     * method, and publishing outside one would drop the notification silently.
      */
     public void notifyTransferCompleted(UUID userId, String message) {
-        try {
-            notificationService.sendNotification(userId, "Transfer completed", message, NotificationType.TRANSFER);
-        } catch (RuntimeException e) {
-            log.warn("Transfer completed but its notification could not be sent for user {}", userId, e);
-        }
+        eventPublisher.publishEvent(new TransferCompletedEvent(userId, message));
     }
 
     /**

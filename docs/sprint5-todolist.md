@@ -18,8 +18,9 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
   docker exec -i obs-postgres psql -U obs -d obs \
       < backend/src/main/resources/db/demo/seed_demo_data.sql
   ```
-  It now seeds customers, accounts, transactions, beneficiaries, transfers and the three QR
-  merchants. Credentials are in `.claude/demo-admin.md` and `.claude/demo-customers.md`.
+  It now seeds customers, staff (ADMIN-role users), accounts, transactions, beneficiaries,
+  transfers, the three QR merchants, bill providers, bill payments, recurring bills,
+  notifications and cards — including a BLOCKED card for US-044 and a PIN-less one for US-045. Credentials are in `.claude/demo-admin.md` and `.claude/demo-customers.md`.
 - **Tests no longer use your local database.** As of Sprint 4 the backend suite starts a throwaway
   Postgres through Testcontainers (`backend/src/test/resources/application-test.properties`), so
   `./mvnw test` needs Docker running but does not care what is in `obs-postgres`. Do not write a
@@ -49,7 +50,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
 ## Backend prerequisites
 
-- [ ] **A customer self-service surface.** US-036 needs it, US-020 depends on it existing, and
+- [x] **A customer self-service surface.** US-036 needs it, US-020 depends on it existing, and
       US-045's card PIN will want it too. There is no customer-facing `/me` today. Build it once,
       under `feature/user/`, rather than three stories each bolting their own endpoint on.
 
@@ -60,33 +61,33 @@ used: another customer's id returns `404`, never `403`, so ids can't probe owner
 
 ### Customer self-service & recovery (US-036, US-020, US-037)
 
-- [ ] `GET /me` — the caller's own profile
-- [ ] `PATCH /me` — update profile, including the optional email address (US-020's source)
-- [ ] `POST /me/password` — change password, current password required (US-036)
-- [ ] `POST /statements/{id}/email` — email a statement to the profile email (US-020), a clean
+- [x] `GET /me` — the caller's own profile
+- [x] `PATCH /me` — update profile, including the optional email address (US-020's source)
+- [x] `POST /me/password` — change password, current password required (US-036)
+- [x] `POST /statements/{id}/email` — email a statement to the profile email (US-020), a clean
       coded 4xx when no address is set
-- [ ] `POST /auth/password/forgot` + `POST /auth/password/reset` — reset flow (US-037)
-- [ ] Reset UI on the admin login screen (US-037 `[React]`) — the shell exists from Sprint 1
+- [x] `POST /auth/password/forgot` + `POST /auth/password/reset` — reset flow (US-037)
+- [x] Reset UI on the admin login screen (US-037 `[React]`) — the shell exists from Sprint 1
 
 ### Bill payments (US-038, US-039, US-041, US-042)
 
-- [ ] Provider model + `V12` migration + seeded demo providers (US-038) — **blocks US-039**
-- [ ] `GET /bill-providers` — list payable providers (US-038)
-- [ ] `POST /bill-payments` — pay electricity / water / internet (US-039)
-- [ ] `GET /bill-payments` — payment history (US-042)
-- [ ] `GET /bill-payments/{id}` — one payment's receipt (US-042)
-- [ ] Scheduled / recurring payments (US-041) — **the designated drop, see above**
+- [x] Provider model + `V12` migration + seeded demo providers (US-038) — **blocks US-039**
+- [x] `GET /bill-providers` — list payable providers (US-038)
+- [x] `POST /bill-payments` — pay electricity / water / internet (US-039)
+- [x] `GET /bill-payments` — payment history (US-042)
+- [x] `GET /bill-payments/{id}` — one payment's receipt (US-042)
+- [x] Scheduled / recurring payments (US-041) — **the designated drop, see above**
 
 US-039 reuses US-027's limits and the US-035 notification through `TransferSupport`. It does not
 get its own caps, its own notification path, or its own ledger.
 
 ### Card management (US-043, US-044, US-045)
 
-- [ ] Card model + migration (US-043)
-- [ ] `POST /cards` — request a new card (US-043)
-- [ ] `GET /cards` — the caller's own cards (US-043)
-- [ ] `POST /cards/{id}/block` + `/unblock` — (US-044)
-- [ ] `PATCH /cards/{id}` — set PIN and spending limits (US-045)
+- [x] Card model + migration (US-043)
+- [x] `POST /cards` — request a new card (US-043)
+- [x] `GET /cards` — the caller's own cards (US-043)
+- [x] `POST /cards/{id}/block` + `/unblock` — (US-044)
+- [x] `PATCH /cards/{id}` — set PIN and spending limits (US-045)
 
 **Never store or return a PIN or a full PAN.** Hash the PIN like a password, and return a masked
 number only. This is the one place in the project where getting it wrong is a real finding rather
@@ -94,13 +95,13 @@ than a style note, and Sprint 6's hardening pass will look straight at it.
 
 ### Admin (US-052)
 
-- [ ] `GET/POST/PATCH/DELETE /admin/bill-providers` — provider CRUD (US-052), `@PreAuthorize` on
+- [x] `GET/POST/PATCH/DELETE /admin/bill-providers` — provider CRUD (US-052), `@PreAuthorize` on
       `ADMIN` and a test that a `CUSTOMER` token gets `403`, same as every admin endpoint since
       Sprint 3
 
 ## Web admin pages (`web-admin/`)
 
-- [ ] Bill provider CRUD screen (US-052) — the last portal screen except Sprint 6's audit log
+- [x] Bill provider CRUD screen (US-052) — the last portal screen except Sprint 6's audit log
 
 Reuse what Sprint 4 left behind rather than rebuilding it: `components/ui/data-table.tsx` is generic
 (`DataTable<T>` with a `Column<T>` list), `components/ui/filter-bar.tsx` was extracted for exactly
@@ -111,22 +112,36 @@ With US-052 the portal is complete except for the audit log (US-056, Sprint 6).
 
 ## Mobile (`mobile/`)
 
-Ten stories against APIs that all already exist and are tested. **Read the state of the app before
-estimating**: `mobile/lib` is 20 Dart files across two features (`auth`, `account`), and
-`mobile/test` contains a single test file.
+Ten stories against APIs that all already exist and are tested. That estimate was written when
+`mobile/lib` was 20 Dart files across two features (`auth`, `account`) with a single test file; it
+is now 52 files across nine features, with five test files.
 
-- [ ] Transfer between own accounts (US-025)
-- [ ] Transfer to another bank (US-026)
-- [ ] Confirmation & receipt (US-028)
-- [ ] Add beneficiary (US-029)
-- [ ] Edit / delete beneficiary (US-030)
-- [ ] Favorites / quick transfer (US-031) — the `favorite` flag already exists on the beneficiary
-      row and is settable via `PATCH /beneficiaries/{id}`; no new endpoint is needed
-- [ ] Generate personal QR (US-032) — `GET /qr/me` returns the payload **string**; rendering it as
-      a QR bitmap is this story
-- [ ] Scan & pay (US-033) — **start this first, see below**
-- [ ] Transfer notifications (US-035)
-- [ ] In-app notification list & balance alerts (US-022 / US-023) — backend shipped in Sprint 3
+- [x] Transfer between own accounts (US-025) — `internal_transfer_screen.dart`
+- [x] Transfer to **another person's account at this bank** (US-026) — `p2p_transfer_screen.dart`.
+      This half did not exist in Sprint 4: `POST /transfers` requires both accounts to be the
+      caller's, so paying another customer was a 404. It is now `POST /transfers/p2p`, which
+      resolves the destination by **account number** (a payer cannot know an account id) and reuses
+      US-025's settlement, limits and ledger legs unchanged.
+- [x] Transfer to another bank (US-026) — `interbank_transfer_screen.dart` against
+      `POST /transfers/external`, with the seeded BIC codes; settles as `PENDING`
+- [x] Confirmation & receipt (US-028) — `transfer_receipt_screen.dart`, driven by
+      `transfer.status`: COMPLETED / PENDING / FAILED each render differently, so US-034's
+      declining merchant cannot show up as a success
+- [x] Add beneficiary (US-029) — from the manage screen and inline in the interbank flow
+- [x] Edit / delete beneficiary (US-030)
+- [x] Favorites / quick transfer (US-031) — favorites lead the quick-transfer strip and the manage
+      list. **Called "Favorites" throughout the mobile UI**; "beneficiary" stays the backend's word
+      for the row and never appears on a customer-facing screen
+- [x] Generate personal QR (US-032) — `qr_scan_pay_screen.dart` renders `GET /qr/me`'s payload with
+      `qr_flutter`, per receiving account
+- [x] Scan & pay (US-033) — `qr_scanner_screen.dart` (`mobile_scanner`), pushed rather than embedded
+      in the tab so the camera only runs while it is open. Payload parsed client-side
+      (`qr_payload.dart`) to fill the confirmation sheet; a code that fixes its own amount locks the
+      amount field
+- [x] Transfer notifications (US-035) — the backend notifies on every transfer path; the app shows
+      them in the list and on the home badge, polled every 30s and on app resume
+- [x] In-app notification list & balance alerts (US-022 / US-023) — `notifications_screen.dart`,
+      mark-as-read via `PATCH /notifications/{id}/read`
 
 Notes that will decide whether this half lands:
 
@@ -145,21 +160,32 @@ Notes that will decide whether this half lands:
 
 ## Known gaps this sprint should close or carry
 
-- **`mobile/lib/core/api/api_client.dart` has no 401 handling and no token refresh.** It is the same
-  gap web-admin carried from Sprint 3 and closed in Sprint 4 — and as of Sprint 4 the backend
-  actually returns `401` for an expired token rather than `403`, so the behaviour mobile sees has
-  changed. Every screen in this sprint is a long-lived data screen that will hit a 15-minute token
-  expiry mid-session. Fix it in the shared client before building the screens, not after.
-- **Mobile has one test file.** Ten stories are about to land on top of that. Even a thin widget
-  test per flow would change what Sprint 6's SIT/UAT has to discover by hand.
-- **`actions/setup-java@v4` is deprecated** in `backend-ci.yml` and warns on every run. One-line fix
-  to `v5`; do it in passing.
-- **Notification isolation is still partial.** `NotificationServiceImpl.sendNotification` is
-  `@Transactional(REQUIRED)` and joins the caller's transaction, so a failure there can still mark
-  a settled transfer's transaction rollback-only despite the catch in `TransferSupport`. Now that
-  bill payments are about to become a third caller, either switch it to `REQUIRES_NEW` or move it
-  behind an `AFTER_COMMIT` listener — the tests can be honest about it now that they run against a
-  throwaway container.
+- [x] **`api_client.dart` 401 handling and token refresh** — closed. Every verb refreshes once and
+      replays, and `/auth/login` and `/auth/refresh` are excluded so a bad password is not mistaken
+      for an expired token.
+- [x] **Mobile had one test file** — now five: widget, auth flow, dashboard navigation, QR payload
+      parsing, and the transfer/beneficiary wire shapes.
+- [x] **`actions/setup-java@v4`** — now `v5` in `backend-ci.yml`.
+- [x] **Notification isolation** — closed by `TransferCompletedNotificationListener`, an
+      `AFTER_COMMIT` + `REQUIRES_NEW` listener, so a notification failure can no longer mark a
+      settled transfer's transaction rollback-only.
+
+Closed during the sprint, worth recording because they were real defects rather than missing work:
+
+- **The mobile client was calling endpoints that do not exist.** `POST /transfers/internal` and
+  `/transfers/interbank` (the backend has `POST /transfers` and `/transfers/external`),
+  `POST /notifications/{id}/read` (it is a `PATCH`), and a beneficiary shape built on
+  `name`/`nickname`/`isInternal` where `BeneficiaryResponse` emits `displayName`/`favorite`.
+- **Every request sent a lowercase currency** (`"usd"`), and `application.properties` does not set
+  `accept-case-insensitive-enums` — so bill payments, recurring bills, QR pay and interbank were all
+  failing validation on that field. All serialization now goes through `Currency.toJson()`.
+- **US-024's session store did not match its acceptance criteria.** Both tokens were in plaintext
+  `SharedPreferences`; the refresh token now lives in `flutter_secure_storage` and the access token
+  is memory-only, exchanged on launch behind a splash state.
+- **Dead and duplicate screens removed**: the Sprint-1 `registration_screen.dart` (superseded by the
+  phone → details → OTP flow, its validation ported over), `qr_screen.dart` (a second copy of the
+  Receive tab), and `account_list_screen.dart` / `account_detail_screen.dart` (reachable only from
+  each other).
 
 ## Out of scope for Sprint 5
 
