@@ -1,6 +1,7 @@
 package com.obs.backend.feature.account.service.impl;
 
 import com.obs.backend.common.dto.PageResponse;
+
 import com.obs.backend.feature.account.dto.AccountResponse;
 import com.obs.backend.feature.account.dto.BalanceResponse;
 import com.obs.backend.feature.account.dto.OpenAccountRequest;
@@ -35,15 +36,18 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final AccountMapper accountMapper;
+    private final com.obs.backend.feature.user.repository.UserRepository userRepository;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public AccountServiceImpl(
             AccountRepository accountRepository,
             TransactionRepository transactionRepository,
-            AccountMapper accountMapper) {
+            AccountMapper accountMapper,
+            com.obs.backend.feature.user.repository.UserRepository userRepository) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.accountMapper = accountMapper;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -110,6 +114,24 @@ public class AccountServiceImpl implements AccountService {
 
         Page<Transaction> page = transactionRepository.findAll(combined, pageable);
         return PageResponse.of(page.map(accountMapper::toResponse));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public com.obs.backend.feature.account.dto.AccountLookupResponse lookupAccount(String accountNumber) {
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(AccountNotFoundException::new);
+        com.obs.backend.feature.user.entity.User user = userRepository.findById(account.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        String firstName = user.getFirstName();
+        String lastName = user.getLastName();
+        
+        String maskedFirst = (firstName == null || firstName.isEmpty()) ? "" : firstName.charAt(0) + "***";
+        String maskedLast = (lastName == null || lastName.isEmpty()) ? "" : lastName.charAt(0) + "***";
+        String maskedName = (maskedFirst + " " + maskedLast).trim();
+        
+        return new com.obs.backend.feature.account.dto.AccountLookupResponse(maskedName);
     }
 
     private Account findOwnedAccount(UUID userId, UUID accountId) {

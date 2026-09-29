@@ -72,19 +72,7 @@ void main() {
       expect(json.containsKey('toAccountId'), isFalse);
     });
 
-    test('interbank transfer uses the beneficiary* field names and an uppercase currency', () {
-      final json = InterbankTransferRequest(
-        fromAccountId: 'a',
-        beneficiaryBankCode: 'ACLBKHPP',
-        beneficiaryAccountNumber: '000123456789',
-        currency: Currency.usd,
-        amount: 10,
-      ).toJson();
 
-      expect(json['beneficiaryBankCode'], 'ACLBKHPP');
-      expect(json['beneficiaryAccountNumber'], '000123456789');
-      expect(json['currency'], 'USD');
-    });
 
     test('beneficiary create/patch use displayName and favorite', () {
       expect(

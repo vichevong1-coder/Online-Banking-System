@@ -3,6 +3,7 @@ import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/presentation/reset_password_screen.dart';
+import 'package:mobile/core/widgets/bank_input_field.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -15,17 +16,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _identifierController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  String? _identifierError;
 
   Future<void> _handleForgot() async {
     final identifier = _identifierController.text.trim();
-    if (identifier.isEmpty) {
-      setState(() => _errorMessage = 'Please enter your phone number or email');
-      return;
-    }
+    
+    setState(() {
+      _identifierError = identifier.isEmpty ? 'Please enter your phone number or email' : null;
+      _errorMessage = null;
+    });
+
+    if (identifier.isEmpty) return;
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
@@ -107,23 +111,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 20),
             ],
 
-            GlassCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Phone or Email', style: TextStyle(fontSize: 13, color: Colors.white70)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _identifierController,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                    decoration: const InputDecoration(
-                      hintText: '+85512345678 or user@email.com',
-                      prefixIcon: Icon(Icons.account_circle_outlined, color: Colors.white70, size: 20),
-                    ),
-                    onSubmitted: (_) => _handleForgot(),
-                  ),
-                ],
-              ),
+            BankInputField(
+              label: 'Phone or Email',
+              hint: '+85512345678 or user@email.com',
+              controller: _identifierController,
+              prefixIcon: Icons.account_circle_outlined,
+              errorText: _identifierError,
+              onChanged: (_) {
+                if (_identifierError != null) setState(() => _identifierError = null);
+              },
+              onSubmitted: (_) => _handleForgot(),
             ),
             const Spacer(),
             PrimaryActionButton(

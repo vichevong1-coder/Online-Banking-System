@@ -202,3 +202,13 @@ class TransactionQuery {
     'size': size.toString(),
   };
 }
+
+class AccountLookupResponse {
+  AccountLookupResponse({required this.maskedName});
+  
+  final String maskedName;
+  
+  factory AccountLookupResponse.fromJson(Map<String, dynamic> json) => AccountLookupResponse(
+    maskedName: json['maskedName'] as String,
+  );
+}

@@ -1,6 +1,6 @@
 import { authFetch } from "@/lib/api-client"
 
-export type Role = "CUSTOMER" | "ADMIN"
+export type Role = "CUSTOMER" | "ADMIN" | "TELLER"
 export type AccountStatus = "ACTIVE" | "SUSPENDED" | "LOCKED"
 
 export type KpiData = {

@@ -7,7 +7,7 @@ import com.obs.backend.feature.account.entity.TransactionType;
 import com.obs.backend.feature.account.exception.AccountNotFoundException;
 import com.obs.backend.feature.account.repository.AccountRepository;
 import com.obs.backend.feature.account.repository.TransactionRepository;
-import com.obs.backend.feature.transfer.dto.CreateExternalTransferRequest;
+
 import com.obs.backend.feature.transfer.dto.CreateP2pTransferRequest;
 import com.obs.backend.feature.transfer.dto.CreateTransferRequest;
 import com.obs.backend.feature.transfer.dto.TransferResponse;
@@ -39,7 +39,7 @@ public class TransferServiceImpl implements TransferService {
     private static final int AMOUNT_SCALE = 4;
 
     /** US-026: how a destination held at another bank is written into transfers.external_ref. */
-    private static final String EXTERNAL_REF_FORMAT = "%s:%s";
+
 
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
@@ -184,75 +184,6 @@ public class TransferServiceImpl implements TransferService {
         return transferMapper.toResponse(transfer, source.getAccountNumber(), destination.getAccountNumber());
     }
 
-    /**
-     * US-026. Interbank, simulated: there is no clearing integration, so the
-     * transfer is settled deterministically in-process — accepted, debited, and
-     * marked COMPLETED before the method returns. Only the debit leg is written,
-     * because the destination account is not ours to credit; that is exactly what
-     * {@code transfers.to_account_id NULL} plus {@code external_ref} are for.
-     *
-     * <p>Every US-027 rule still applies. Currency is the one that differs: with
-     * no local destination there is nothing to compare against, so the check
-     * becomes "the currency the caller declared must be the source account's" —
-     * still a refusal to convert, still {@code 400 CURRENCY_MISMATCH}.
-     */
-    @Override
-    @Transactional
-    public TransferResponse transferExternal(UUID userId, CreateExternalTransferRequest request) {
-        // 404 for an account that isn't the caller's, same as US-025.
-        Account source = findOwnedAccount(userId, request.fromAccountId());
-
-        if (source.getCurrency() != request.currency()) {
-            throw new CurrencyMismatchException();
-        }
-
-        BigDecimal amount = request.amount().setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
-        transferSupport.checkLimitsAndFunds(userId, source, amount);
-
-        String externalRef =
-                EXTERNAL_REF_FORMAT.formatted(request.beneficiaryBankCode(), request.beneficiaryAccountNumber());
-        // Born PENDING — it is only accepted at this point — then settled below.
-        // saveAndFlush for the same reasons as US-025: createdAt and the leg's FK.
-        Transfer transfer = Transfer.external(
-                source.getId(),
-                externalRef,
-                amount,
-                source.getCurrency(),
-                transferSupport.generateReference(),
-                request.description());
-        transfer = transferRepository.saveAndFlush(transfer);
-
-        source.debit(amount);
-        accountRepository.save(source);
-
-        transactionRepository.save(new Transaction(
-                source.getId(),
-                TransactionType.TRANSFER_OUT,
-                amount,
-                source.getCurrency(),
-                request.description(),
-                source.getBalance(),
-                transfer.getId()));
-
-        // The simulated settlement response. A real integration would leave the
-        // row PENDING and complete it on a callback; this is the seam where that
-        // would go. Settling here also keeps the transfer inside the US-027 daily
-        // cap, which sums COMPLETED rows only.
-        transfer.markCompleted();
-
-        transferSupport.notifyTransferCompleted(
-                userId,
-                "%s %s sent from account %s to %s at bank %s. Reference %s."
-                        .formatted(
-                                source.getCurrency(),
-                                amount.toPlainString(),
-                                source.getAccountNumber(),
-                                request.beneficiaryAccountNumber(),
-                                request.beneficiaryBankCode(),
-                                transfer.getReference()));
-
-        return transferMapper.toResponse(transfer, source.getAccountNumber(), null);
-    }
 
     @Override
     @Transactional(readOnly = true)

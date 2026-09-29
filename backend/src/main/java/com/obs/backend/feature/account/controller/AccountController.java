@@ -69,4 +69,9 @@ public class AccountController {
         Pageable pageable = PageRequest.of(page, size);
         return accountService.listTransactions(currentUserProvider.currentUserId(), accountId, filter, pageable);
     }
+
+    @GetMapping("/lookup")
+    public com.obs.backend.feature.account.dto.AccountLookupResponse lookupAccount(@RequestParam String number) {
+        return accountService.lookupAccount(number);
+    }
 }

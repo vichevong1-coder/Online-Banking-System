@@ -122,36 +122,6 @@ class P2pTransferRequest {
   };
 }
 
-/// US-026: `POST /transfers/external`. The destination is a bank code plus an
-/// account number; the payee's *name* is deliberately not part of the transfer
-/// — a named payee is a beneficiary (US-029).
-class InterbankTransferRequest {
-  InterbankTransferRequest({
-    required this.fromAccountId,
-    required this.beneficiaryBankCode,
-    required this.beneficiaryAccountNumber,
-    required this.currency,
-    required this.amount,
-    this.description,
-  });
-
-  final String fromAccountId;
-  final String beneficiaryBankCode;
-  final String beneficiaryAccountNumber;
-  final Currency currency;
-  final double amount;
-  final String? description;
-
-  Map<String, dynamic> toJson() => {
-    'fromAccountId': fromAccountId,
-    'beneficiaryBankCode': beneficiaryBankCode,
-    'beneficiaryAccountNumber': beneficiaryAccountNumber,
-    'currency': currency.toJson(),
-    'amount': amount,
-    if (description != null && description!.isNotEmpty) 'description': description,
-  };
-}
-
 /// US-029/US-030: a saved payee at another bank. Every beneficiary is external
 /// — the backend requires a bank code, so there is no "own bank" variant.
 class Beneficiary {

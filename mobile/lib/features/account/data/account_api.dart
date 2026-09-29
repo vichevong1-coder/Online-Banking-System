@@ -49,4 +49,9 @@ class AccountApi {
       },
     );
   }
+
+  Future<AccountLookupResponse> lookupAccount(String number) async {
+    final json = await _client.get('/accounts/lookup', query: {'number': number});
+    return AccountLookupResponse.fromJson(json as Map<String, dynamic>);
+  }
 }

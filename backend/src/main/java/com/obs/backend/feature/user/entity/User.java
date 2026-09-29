@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
+import jakarta.persistence.Convert;
 
 @Entity
 @Table(name = "users")
@@ -40,6 +41,7 @@ public class User {
 
     // Nullable: KYC fields only apply to customer registration (US-007).
     // Admin/staff rows (see V2 migration) have no ID document to record.
+    @Convert(converter = StringCryptoConverter.class)
     @Column(name = "nid_number")
     private String nidNumber;
 
@@ -137,6 +139,23 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public void updateCustomerDetails(
+            String firstName,
+            String lastName,
+            String phone,
+            String nidNumber,
+            java.time.LocalDate nidExpiryDate,
+            java.time.LocalDate dateOfBirth,
+            Gender gender) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.phone = phone;
+        this.nidNumber = nidNumber;
+        this.nidExpiryDate = nidExpiryDate;
+        this.dateOfBirth = dateOfBirth;
+        this.gender = gender;
     }
 
     public void changePassword(String newPasswordHash) {

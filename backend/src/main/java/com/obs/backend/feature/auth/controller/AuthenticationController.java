@@ -8,6 +8,7 @@ import com.obs.backend.feature.auth.dto.RefreshResponse;
 import com.obs.backend.feature.auth.dto.TwoFactorResendRequest;
 import com.obs.backend.feature.auth.dto.TwoFactorVerifyRequest;
 import com.obs.backend.feature.auth.service.AuthenticationService;
+import com.obs.backend.feature.audit.AuditService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,14 +25,19 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
+    private final AuditService auditService;
 
-    public AuthenticationController(AuthenticationService authenticationService) {
+    public AuthenticationController(AuthenticationService authenticationService, AuditService auditService) {
         this.authenticationService = authenticationService;
+        this.auditService = auditService;
     }
 
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        return authenticationService.login(request);
+        LoginResponse response = authenticationService.login(request);
+        String identifier = request.email() != null ? request.email() : request.phone();
+        auditService.logAction(null, identifier, "USER_LOGIN", null, null, "User logged in with identifier: " + identifier);
+        return response;
     }
 
     @PostMapping("/2fa/verify")
@@ -53,11 +59,21 @@ public class AuthenticationController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authenticationService.forgotPassword(request);
+        String identifier = request.identifier();
+        auditService.logAction(null, identifier, "PASSWORD_FORGOT", null, null, "Forgot password requested for: " + identifier);
     }
 
     @PostMapping("/password/reset")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authenticationService.resetPassword(request);
+        auditService.logAction(null, null, "PASSWORD_RESET", null, null, "Password reset using token");
+    }
+
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@Valid @RequestBody com.obs.backend.feature.auth.dto.LogoutRequest request) {
+        authenticationService.logout(request);
+        auditService.logAction(null, null, "USER_LOGOUT", null, null, "User logged out");
     }
 }

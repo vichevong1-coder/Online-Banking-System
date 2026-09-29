@@ -22,6 +22,7 @@ class ObsApp extends StatelessWidget {
             : (session.isAuthenticated ? const MainDashboardScreen() : const WelcomeLandingScreen());
 
         return MaterialApp(
+          key: ValueKey(session.isAuthenticated),
           title: 'Online Banking',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.darkTheme,

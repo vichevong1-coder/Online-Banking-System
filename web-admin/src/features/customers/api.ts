@@ -74,6 +74,18 @@ export async function updateCustomerStatus(
   })
 }
 
+export async function fundCustomerAccount(
+  accessToken: string,
+  customerId: string,
+  accountId: string,
+  amount: number,
+): Promise<Account> {
+  return authFetch<Account>(`/admin/customers/${customerId}/accounts/${accountId}/fund`, accessToken, {
+    method: "POST",
+    body: JSON.stringify({ amount }),
+  })
+}
+
 // Riel is conventionally written without decimal places, but Intl defaults KHR to two (it returns
 // "KHR 5,000,000.00"), so the fraction digits are overridden rather than left to the currency code.
 // USD keeps its two. Both accounts of a multi-currency customer sit in one list, so they have to
@@ -92,4 +104,43 @@ export function formatMoney(amount: number, currency: string): string {
 
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+}
+
+export type CreateCustomerPayload = {
+  firstName: string
+  lastName: string
+  phone: string
+  password?: string
+  nidNumber?: string | null
+  nidExpiryDate?: string | null
+  dateOfBirth?: string | null
+  gender?: "MALE" | "FEMALE" | null
+}
+
+export type UpdateCustomerPayload = {
+  firstName: string
+  lastName: string
+  phone: string
+  nidNumber?: string | null
+  nidExpiryDate?: string | null
+  dateOfBirth?: string | null
+  gender?: "MALE" | "FEMALE" | null
+}
+
+export async function createCustomer(accessToken: string, payload: CreateCustomerPayload): Promise<CustomerDetail> {
+  return authFetch<CustomerDetail>("/admin/customers", accessToken, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function updateCustomer(
+  accessToken: string,
+  customerId: string,
+  payload: UpdateCustomerPayload,
+): Promise<CustomerDetail> {
+  return authFetch<CustomerDetail>(`/admin/customers/${customerId}`, accessToken, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  })
 }

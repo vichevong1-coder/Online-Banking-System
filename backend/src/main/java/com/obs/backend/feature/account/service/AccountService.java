@@ -1,6 +1,7 @@
 package com.obs.backend.feature.account.service;
 
 import com.obs.backend.common.dto.PageResponse;
+import com.obs.backend.feature.account.dto.AccountLookupResponse;
 import com.obs.backend.feature.account.dto.AccountResponse;
 import com.obs.backend.feature.account.dto.BalanceResponse;
 import com.obs.backend.feature.account.dto.OpenAccountRequest;
@@ -20,4 +21,6 @@ public interface AccountService {
 
     PageResponse<TransactionResponse> listTransactions(
             UUID userId, UUID accountId, TransactionFilter filter, Pageable pageable);
+
+    AccountLookupResponse lookupAccount(String accountNumber);
 }

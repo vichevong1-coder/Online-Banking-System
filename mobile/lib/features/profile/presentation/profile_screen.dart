@@ -3,6 +3,7 @@ import 'package:mobile/core/session/session_manager.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/auth_models.dart';
+import 'package:mobile/features/auth/presentation/welcome_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -184,9 +185,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _handleLogout() async {
     await SessionManager.instance.clearSession();
-    // No manual navigation needed — the ListenableBuilder in app.dart
-    // automatically rebuilds to WelcomeLandingScreen when isAuthenticated
-    // becomes false after clearSession() calls notifyListeners().
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const WelcomeLandingScreen()),
+      (route) => false,
+    );
   }
 
   Widget _infoTile(String label, String value, {Widget? trailing}) {

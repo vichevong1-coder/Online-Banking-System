@@ -4,7 +4,7 @@ import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/transfer/data/transfer_api.dart';
 import 'package:mobile/features/transfer/data/transfer_models.dart';
-import 'package:mobile/features/transfer/presentation/interbank_transfer_screen.dart';
+// import 'package:mobile/features/transfer/presentation/interbank_transfer_screen.dart';
 
 /// US-029/US-030/US-031. Called "favorites" everywhere the customer can see —
 /// "beneficiary" is the backend's word for the row, not a word to put in front
@@ -288,11 +288,8 @@ class _BeneficiaryManagementScreenState extends State<BeneficiaryManagementScree
                               child: GlassCard(
                                 padding: const EdgeInsets.all(14),
                                 borderRadius: 14,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => InterbankTransferScreen(prefilledBeneficiary: b),
-                                  ),
+                                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Interbank transfers disabled for this demo')),
                                 ),
                                 child: Row(
                                   children: [

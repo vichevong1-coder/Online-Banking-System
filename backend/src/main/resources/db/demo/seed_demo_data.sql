@@ -52,6 +52,7 @@ DELETE FROM notifications WHERE user_id IN (
     SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
 DELETE FROM accounts WHERE user_id IN (
     SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
+DELETE FROM audit_logs WHERE id::text LIKE '9a000000-%';
 DELETE FROM users WHERE id::text LIKE 'd0000000-%';
 
 -- ---------------------------------------------------------------- customers
@@ -120,7 +121,11 @@ INSERT INTO users (id, first_name, last_name, password_hash, email, nid_number,
 ('d0000000-0000-0000-0000-000000000013', 'Rithy', 'Noun',
  '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'rithy.noun@obs.local',
  NULL, NULL, NULL, NULL, '+85511900003',
- 'ADMIN', 'SUSPENDED', TRUE, now() - INTERVAL '25 days');
+ 'ADMIN', 'SUSPENDED', TRUE, now() - INTERVAL '25 days'),
+('d0000000-0000-0000-0000-000000000014', 'Bopha', 'Lim',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'bopha.lim@obs.local',
+ NULL, NULL, NULL, NULL, '+85511900004',
+ 'TELLER', 'ACTIVE', TRUE, now() - INTERVAL '10 days');
 
 -- ----------------------------------------------------------------- accounts
 -- Demo account numbers use the 9000000000xx block so they cannot collide with
@@ -244,17 +249,17 @@ INSERT INTO transfers (id, from_account_id, to_account_id, external_ref, amount,
 ('e0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000001',
  'a0000000-0000-0000-0000-000000000009', NULL,              18.0000, 'USD', 'FAILED',
  'TRF6JM1Q5Z8E', 'Riverside Books',       now() - INTERVAL '4 hours'),
--- Interbank, still awaiting settlement — the only status PENDING is reachable in.
+-- Internal transfer
 ('e0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000001',
- NULL, 'ACLBKHPP:000123456789',           450.0000, 'USD', 'PENDING',
+ 'a0000000-0000-0000-0000-000000000003', NULL,           450.0000, 'USD', 'COMPLETED',
  'TRF3XB7R2K9C', 'August rent',           now() - INTERVAL '5 hours'),
 -- Older history, so the feed's date-range filter has something to exclude.
 ('e0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000001',
  'a0000000-0000-0000-0000-000000000004', NULL,             150.0000, 'USD', 'COMPLETED',
  'TRF8HD4L6Y1F', 'To Nita',               now() - INTERVAL '35 days'),
 ('e0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000003',
- NULL, 'WINGKHPP:855012345678',           320.0000, 'USD', 'COMPLETED',
- 'TRF9TG3S8N5H', 'Wing cash out',         now() - INTERVAL '18 days'),
+ 'a0000000-0000-0000-0000-000000000004', NULL,           320.0000, 'USD', 'COMPLETED',
+ 'TRF9TG3S8N5H', 'To Nita',         now() - INTERVAL '18 days'),
 ('e0000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0000-000000000005',
  'a0000000-0000-0000-0000-000000000002', NULL,          750000.0000, 'KHR', 'COMPLETED',
  'TRF4WY6P9J2G', 'Repayment',             now() - INTERVAL '9 days'),
@@ -398,4 +403,17 @@ INSERT INTO notifications (id, user_id, title, message, type, read, created_at) 
  'Card blocked', 'Your card ending 9012 has been blocked. Unblock it from the app.',
  'SECURITY',      FALSE, now() - INTERVAL '4 days');
 
+
+-- ------------------------------------------------------------ audit logs
+-- Seeded audit logs so the US-055 Audit Logs page isn't empty.
+-- We use actor_id matching the admins (Sovann and Chanda) and the new teller (Bopha).
+INSERT INTO audit_logs (id, actor_id, actor_email, action_type, entity_id, entity_type, details, ip_address, created_at) VALUES
+('9a000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000011', 'sovann.meas@obs.local',
+ 'LOGIN_SUCCESS', 'd0000000-0000-0000-0000-000000000011', 'USER', 'Admin logged in', '192.168.1.55', now() - INTERVAL '2 days'),
+('9a000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000011', 'sovann.meas@obs.local',
+ 'ACCOUNT_STATUS_CHANGED', 'd0000000-0000-0000-0000-000000000004', 'USER', 'Status updated to: SUSPENDED', '192.168.1.55', now() - INTERVAL '30 days'),
+('9a000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000012', 'chanda.ly@obs.local',
+ 'CUSTOMER_CREATED', 'd0000000-0000-0000-0000-000000000003', 'USER', 'Staff created customer', '192.168.1.102', now() - INTERVAL '80 days'),
+('9a000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-000000000014', 'bopha.lim@obs.local',
+ 'CUSTOMER_UPDATED', 'd0000000-0000-0000-0000-000000000001', 'USER', 'Staff updated customer details', '192.168.1.200', now() - INTERVAL '1 day');
 COMMIT;

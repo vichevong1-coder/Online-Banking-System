@@ -45,6 +45,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final OtpService otpService;
     private final JwtService jwtService;
     private final LoginAttemptService loginAttemptService;
+    private final com.obs.backend.security.jwt.RevokedTokenRepository revokedTokenRepository;
 
     public AuthenticationServiceImpl(
             UserRepository userRepository,
@@ -52,13 +53,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             AccountStatusPolicy accountStatusPolicy,
             OtpService otpService,
             JwtService jwtService,
-            LoginAttemptService loginAttemptService) {
+            LoginAttemptService loginAttemptService,
+            com.obs.backend.security.jwt.RevokedTokenRepository revokedTokenRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.accountStatusPolicy = accountStatusPolicy;
         this.otpService = otpService;
         this.jwtService = jwtService;
         this.loginAttemptService = loginAttemptService;
+        this.revokedTokenRepository = revokedTokenRepository;
     }
 
     @Override
@@ -96,6 +99,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         User user = resolveChallengeUser(request.challengeToken());
 
         otpService.verify(user, OtpPurpose.LOGIN, request.code());
+        String jti = jwtService.parseClaims(request.challengeToken()).getId();
+        if (jti != null) {
+            revokedTokenRepository.save(new com.obs.backend.security.jwt.RevokedToken(jti));
+        }
         return issueTokens(user);
     }
 
@@ -112,10 +119,29 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     @Transactional
     public RefreshResponse refresh(RefreshRequest request) {
+        io.jsonwebtoken.Claims claims;
+        try {
+            claims = jwtService.parseClaims(request.refreshToken());
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
+            throw new InvalidRefreshTokenException();
+        }
+        
+        String jti = claims.getId();
+        if (jti != null && revokedTokenRepository.existsById(jti)) {
+            throw new InvalidRefreshTokenException();
+        }
+        
         UUID userId = jwtService
                 .resolveRefreshSubject(request.refreshToken())
                 .map(UUID::fromString)
                 .orElseThrow(InvalidRefreshTokenException::new);
+                
+        revokedTokenRepository.findById("USER-" + userId).ifPresent(revoked -> {
+            if (claims.getIssuedAt().toInstant().isBefore(revoked.getRevokedAt())) {
+                throw new InvalidRefreshTokenException();
+            }
+        });
+        
         User user = userRepository.findById(userId).orElseThrow(InvalidRefreshTokenException::new);
 
         accountStatusPolicy.checkLoginAllowed(user.getStatus());
@@ -190,5 +216,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         otpService.verify(user, OtpPurpose.PASSWORD_RESET, request.code());
         user.changePassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void logout(com.obs.backend.feature.auth.dto.LogoutRequest request) {
+        try {
+            String jti = jwtService.parseClaims(request.refreshToken()).getId();
+            if (jti != null) {
+                revokedTokenRepository.save(new com.obs.backend.security.jwt.RevokedToken(jti));
+            }
+        } catch (Exception e) {
+            // Ignore invalid tokens on logout
+        }
     }
 }

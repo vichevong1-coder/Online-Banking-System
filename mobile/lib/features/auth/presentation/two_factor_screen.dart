@@ -5,6 +5,7 @@ import 'package:mobile/core/session/session_manager.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/jwt.dart';
+import 'package:mobile/features/dashboard/presentation/main_dashboard_screen.dart';
 
 class TwoFactorScreen extends StatefulWidget {
   final String phone;
@@ -88,9 +89,11 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
         lastName: tokens.lastName,
         phone: widget.phone,
       );
-      // No manual navigation needed — the ListenableBuilder in app.dart
-      // automatically rebuilds to MainDashboardScreen when isAuthenticated
-      // becomes true after saveSession() calls notifyListeners().
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainDashboardScreen()),
+        (route) => false,
+      );
     } on ApiException catch (e) {
       setState(() => _errorMessage = e.message);
     } catch (_) {

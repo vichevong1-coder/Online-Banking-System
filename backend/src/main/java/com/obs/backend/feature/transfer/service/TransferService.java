@@ -1,7 +1,7 @@
 package com.obs.backend.feature.transfer.service;
 
 import com.obs.backend.common.dto.PageResponse;
-import com.obs.backend.feature.transfer.dto.CreateExternalTransferRequest;
+
 import com.obs.backend.feature.transfer.dto.CreateP2pTransferRequest;
 import com.obs.backend.feature.transfer.dto.CreateTransferRequest;
 import com.obs.backend.feature.transfer.dto.TransferResponse;
@@ -16,8 +16,6 @@ public interface TransferService {
     /** US-026: moves money to another customer's account at this bank, named by account number. */
     TransferResponse transferToAccountNumber(UUID userId, CreateP2pTransferRequest request);
 
-    /** US-026: moves money out to an account at another bank, with simulated settlement. */
-    TransferResponse transferExternal(UUID userId, CreateExternalTransferRequest request);
 
     /** US-028: the receipt for one of the caller's own transfers. */
     TransferResponse getTransfer(UUID userId, UUID transferId);

@@ -36,7 +36,7 @@ public class AdminStaffServiceImpl implements AdminStaffService {
     @Override
     @Transactional(readOnly = true)
     public List<StaffResponse> listStaff() {
-        return userRepository.findByRoleOrderByCreatedAtDesc(Role.ADMIN).stream()
+        return userRepository.findByRoleInOrderByCreatedAtDesc(List.of(Role.ADMIN, Role.TELLER)).stream()
                 .map(adminStaffMapper::toResponse)
                 .toList();
     }
@@ -66,7 +66,7 @@ public class AdminStaffServiceImpl implements AdminStaffService {
     @Override
     @Transactional
     public StaffResponse updateStaffRole(UUID staffId, UpdateStaffRoleRequest request) {
-        User staff = userRepository.findByIdAndRole(staffId, Role.ADMIN)
+        User staff = userRepository.findByIdAndRoleIn(staffId, List.of(Role.ADMIN, Role.TELLER))
                 .orElseThrow(() -> new StaffNotFoundException(staffId));
         staff.changeRole(request.role());
         User saved = userRepository.save(staff);

@@ -1,7 +1,7 @@
 package com.obs.backend.feature.transfer.controller;
 
 import com.obs.backend.common.dto.PageResponse;
-import com.obs.backend.feature.transfer.dto.CreateExternalTransferRequest;
+
 import com.obs.backend.feature.transfer.dto.CreateP2pTransferRequest;
 import com.obs.backend.feature.transfer.dto.CreateTransferRequest;
 import com.obs.backend.feature.transfer.dto.TransferResponse;
@@ -51,16 +51,6 @@ public class TransferController {
         return transferService.transferToAccountNumber(currentUserProvider.currentUserId(), request);
     }
 
-    /**
-     * US-026: out to an account at another bank. A separate endpoint rather than an
-     * optional field on {@code POST /transfers}, because the destination is named
-     * differently and only the debit leg exists.
-     */
-    @PostMapping("/external")
-    @ResponseStatus(HttpStatus.CREATED)
-    public TransferResponse createExternalTransfer(@Valid @RequestBody CreateExternalTransferRequest request) {
-        return transferService.transferExternal(currentUserProvider.currentUserId(), request);
-    }
 
     /** US-028: the caller's own transfer history, newest first. */
     @GetMapping

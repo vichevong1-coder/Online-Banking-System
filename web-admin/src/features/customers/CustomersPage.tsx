@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
-import { Search } from "lucide-react"
+import { Search, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -12,12 +12,14 @@ import {
   getCustomerAccounts,
   searchCustomers,
   updateCustomerStatus,
+  fundCustomerAccount,
   type Account,
   type AccountStatus,
   type CustomerDetail,
   type CustomerSummary,
 } from "@/features/customers/api"
 import { CustomerDetailDrawer } from "@/features/customers/CustomerDetailDrawer"
+import { CustomerFormDialog } from "@/features/customers/CustomerFormDialog"
 import { StatusBadge } from "@/features/customers/StatusBadge"
 
 const PAGE_SIZE = 20
@@ -43,6 +45,8 @@ export function CustomersPage() {
   const [detail, setDetail] = useState<CustomerDetail | null>(null)
   const [accounts, setAccounts] = useState<Account[] | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
+  
+  const [formOpen, setFormOpen] = useState(false)
 
   // Debounce so typing a name doesn't fire a request per keystroke.
   useEffect(() => {
@@ -119,6 +123,22 @@ export function CustomersPage() {
     [accessToken],
   )
 
+  const fundAccount = useCallback(
+    async (customerId: string, accountId: string, amount: number) => {
+      if (!accessToken) return
+      try {
+        const updated = await fundCustomerAccount(accessToken, customerId, accountId, amount)
+        setAccounts((current) => 
+          current ? current.map((acc) => (acc.id === accountId ? updated : acc)) : null
+        )
+        toast.success(`Successfully added funds to ${updated.accountNumber}.`)
+      } catch {
+        toast.error("Couldn't add funds to this account.")
+      }
+    },
+    [accessToken],
+  )
+
   const columns: Column<CustomerSummary>[] = [
     {
       key: "name",
@@ -156,15 +176,21 @@ export function CustomersPage() {
             {loading ? "Loading…" : `${totalElements} customer${totalElements === 1 ? "" : "s"}`}
           </p>
         </div>
-        <div className="relative w-full max-w-xs">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search name or phone"
-            className="pl-8"
-            aria-label="Search customers by name or phone"
-          />
+        <div className="flex items-center gap-2 relative w-full max-w-sm">
+          <div className="relative w-full">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search name or phone"
+              className="pl-8"
+              aria-label="Search customers by name or phone"
+            />
+          </div>
+          <Button onClick={() => setFormOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            New Customer
+          </Button>
         </div>
       </div>
 
@@ -210,7 +236,32 @@ export function CustomersPage() {
         error={detailError}
         onClose={() => setSelected(null)}
         onChangeStatus={changeStatus}
+        onFundAccount={fundAccount}
+        onEditCustomer={() => {
+          setFormOpen(true)
+        }}
       />
+      {formOpen && accessToken && (
+        <CustomerFormDialog
+          accessToken={accessToken}
+          open={formOpen}
+          onOpenChange={setFormOpen}
+          editingCustomer={detail}
+          onSuccess={(customer, isEdit) => {
+            if (isEdit) {
+              setDetail(customer)
+              setSelected(customer)
+              setCustomers((current) =>
+                current.map((c) => (c.id === customer.id ? customer : c))
+              )
+            } else {
+              setSearch("")
+              setPage(0)
+              setDebouncedSearch("")
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -19,11 +19,7 @@ class TransferApi {
     return TransferResponse.fromJson(json!);
   }
 
-  /// US-026, other banks.
-  Future<TransferResponse> interbankTransfer(InterbankTransferRequest request) async {
-    final json = await _client.post('/transfers/external', request.toJson());
-    return TransferResponse.fromJson(json!);
-  }
+
 
   Future<TransferResponse> getTransfer(String id) async {
     final json = await _client.get('/transfers/$id');

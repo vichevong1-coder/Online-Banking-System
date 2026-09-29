@@ -5,6 +5,7 @@ import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/presentation/forgot_password_screen.dart';
 import 'package:mobile/features/auth/presentation/phone_entry_screen.dart';
 import 'package:mobile/features/auth/presentation/two_factor_screen.dart';
+import 'package:mobile/core/widgets/bank_input_field.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,24 +15,28 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _phoneController = TextEditingController(text: '+85512000001');
-  final _passwordController = TextEditingController(text: 'CustomerPass123!');
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _phoneError;
+  String? _passwordError;
 
   Future<void> _handleLogin() async {
     final phone = _phoneController.text.trim();
-    final password = _passwordController.text;
+    final password = _passwordController.text.trim();
 
-    if (phone.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Please enter both phone number and password');
-      return;
-    }
+    setState(() {
+      _phoneError = phone.isEmpty ? 'Please enter your phone number' : null;
+      _passwordError = password.isEmpty ? 'Please enter your password' : null;
+      _errorMessage = null;
+    });
+
+    if (phone.isEmpty || password.isEmpty) return;
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
@@ -109,59 +114,47 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 20),
             ],
 
-            GlassCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Phone Number', style: TextStyle(fontSize: 13, color: Colors.white70)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                    decoration: const InputDecoration(
-                      hintText: '+855 12 345 678',
-                      prefixIcon: Icon(Icons.phone_outlined, color: Colors.white70, size: 20),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Password', style: TextStyle(fontSize: 13, color: Colors.white70)),
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
-                        ),
-                        child: const Text(
-                          'Forgot Password?',
-                          style: TextStyle(fontSize: 12, color: AppTheme.emeraldLight, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                    decoration: InputDecoration(
-                      hintText: '••••••••',
-                      prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70, size: 20),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                          color: Colors.white70,
-                          size: 20,
-                        ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      ),
-                    ),
-                    onSubmitted: (_) => _handleLogin(),
-                  ),
-                ],
+            BankInputField(
+              label: 'Phone Number',
+              hint: '+855 12 345 678',
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              prefixIcon: Icons.phone_outlined,
+              errorText: _phoneError,
+              onChanged: (_) {
+                if (_phoneError != null) setState(() => _phoneError = null);
+              },
+            ),
+            const SizedBox(height: 20),
+            BankInputField(
+              label: 'Password',
+              hint: '••••••••',
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              prefixIcon: Icons.lock_outline,
+              errorText: _passwordError,
+              trailingLabelWidget: GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                ),
+                child: const Text(
+                  'Forgot Password?',
+                  style: TextStyle(fontSize: 12, color: AppTheme.emeraldLight, fontWeight: FontWeight.w600),
+                ),
               ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  color: Colors.white70,
+                  size: 20,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+              onChanged: (_) {
+                if (_passwordError != null) setState(() => _passwordError = null);
+              },
+              onSubmitted: (_) => _handleLogin(),
             ),
             const SizedBox(height: 32),
             PrimaryActionButton(

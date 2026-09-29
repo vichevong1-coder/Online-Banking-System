@@ -20,7 +20,7 @@ public interface AuthenticationService {
     LoginResponse resendTwoFactor(TwoFactorResendRequest request);
 
     RefreshResponse refresh(RefreshRequest request);
-
+    void logout(com.obs.backend.feature.auth.dto.LogoutRequest request);
     void forgotPassword(ForgotPasswordRequest request);
 
     void resetPassword(ResetPasswordRequest request);

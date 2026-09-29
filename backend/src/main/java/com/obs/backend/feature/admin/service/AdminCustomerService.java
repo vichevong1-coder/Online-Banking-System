@@ -18,4 +18,10 @@ public interface AdminCustomerService {
     List<AccountResponse> listCustomerAccounts(UUID customerId);
 
     CustomerDetailResponse updateStatus(UUID customerId, UpdateCustomerStatusRequest request);
+
+    AccountResponse fundAccount(UUID customerId, UUID accountId, com.obs.backend.feature.admin.dto.FundAccountRequest request);
+
+    CustomerDetailResponse createCustomer(com.obs.backend.feature.admin.dto.CreateCustomerRequest request);
+
+    CustomerDetailResponse updateCustomer(UUID customerId, com.obs.backend.feature.admin.dto.UpdateCustomerRequest request);
 }

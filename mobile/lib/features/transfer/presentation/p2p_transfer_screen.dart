@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile/core/api/api_client.dart';
@@ -32,12 +33,56 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
   bool _isLoading = false;
   bool _fetchingAccounts = true;
   String? _errorMessage;
+  String? _amountError;
+  String? _accountNumError;
+
+  String? _resolvedName;
+  bool _resolvingName = false;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    _accountNumberController.addListener(() => setState(() {}));
+    _accountNumberController.addListener(() {
+      setState(() {});
+      _lookupAccountName();
+    });
     _fetchAccounts();
+  }
+
+  void _lookupAccountName() {
+    final text = _accountNumberController.text.trim();
+    if (text.length < _minAccountNumberLength) {
+      if (_resolvedName != null || _resolvingName) {
+        setState(() {
+          _resolvedName = null;
+          _resolvingName = false;
+        });
+      }
+      return;
+    }
+    
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 600), () async {
+      setState(() => _resolvingName = true);
+      try {
+        final res = await AccountApi().lookupAccount(text);
+        if (mounted) {
+          setState(() {
+            _resolvedName = res.maskedName;
+            _accountNumError = null;
+            _resolvingName = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _resolvedName = null;
+            _resolvingName = false;
+          });
+        }
+      }
+    });
   }
 
   @override
@@ -65,22 +110,26 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
     final amount = double.tryParse(_amountController.text.trim());
     final accNum = _accountNumberController.text.trim();
 
-    if (_fromAccount == null) {
-      setState(() => _errorMessage = 'Please select a source account');
-      return;
-    }
-    if (accNum.length < _minAccountNumberLength || accNum.length > _maxAccountNumberLength) {
-      setState(() => _errorMessage =
-          "Enter the recipient's account number ($_minAccountNumberLength–$_maxAccountNumberLength digits)");
-      return;
-    }
-    if (amount == null || amount <= 0) {
-      setState(() => _errorMessage = 'Please enter a valid amount');
-      return;
-    }
+    setState(() {
+      _amountError = null;
+      _accountNumError = null;
+      _errorMessage = null;
 
-    setState(() => _errorMessage = null);
+      if (_fromAccount == null) {
+        _errorMessage = 'Please select a source account';
+      }
+      if (accNum.length < _minAccountNumberLength || accNum.length > _maxAccountNumberLength) {
+        _accountNumError = "Enter the recipient's account number ($_minAccountNumberLength–$_maxAccountNumberLength digits)";
+      }
+      if (amount == null || amount <= 0) {
+        _amountError = 'Please enter a valid amount';
+      }
+    });
 
+    if (_errorMessage != null || _amountError != null || _accountNumError != null) return;
+
+    final amountToTransfer = amount!;
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF0A2B24),
@@ -94,17 +143,15 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
             const Text('Confirm payment',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 6),
-            // The bank does not hand back the holder's name, so the number the
-            // payer typed is the only thing there is to check. Say so plainly
-            // rather than implying a name was verified.
-            const Text(
-              'Check the account number with the person you are paying — this cannot be reversed.',
-              style: TextStyle(fontSize: 11, color: Colors.white54),
-            ),
+            if (_resolvedName != null)
+              Text(
+                'Paying $_resolvedName',
+                style: const TextStyle(fontSize: 13, color: AppTheme.emeraldLight, fontWeight: FontWeight.w600),
+              ),
             const SizedBox(height: 16),
             _summaryRow('To account', accNum),
             _summaryRow('From Account', '${_fromAccount!.accountNumber} (${_fromAccount!.currency.toJson()})'),
-            _summaryRow('Amount', formatMoney(amount, _fromAccount!.currency)),
+            _summaryRow('Amount', formatMoney(amountToTransfer, _fromAccount!.currency)),
             if (_descController.text.isNotEmpty) _summaryRow('Note', _descController.text),
             const SizedBox(height: 24),
             Row(
@@ -122,7 +169,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
                     title: 'SEND MONEY',
                     onPressed: () {
                       Navigator.pop(ctx);
-                      _executeTransfer(amount, accNum);
+                      _executeTransfer(amountToTransfer, accNum);
                     },
                   ),
                 ),
@@ -271,14 +318,18 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
                             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                             style: const TextStyle(
                                 color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 1.1),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'e.g. 900000000002',
                               counterText: '',
                               filled: false,
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
+                              errorText: _accountNumError,
                             ),
+                            onChanged: (_) {
+                              if (_accountNumError != null) setState(() => _accountNumError = null);
+                            },
                           ),
                         ),
                         if (_accountNumberController.text.trim().length >= _minAccountNumberLength)
@@ -286,11 +337,36 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Only accounts at this bank. To pay another bank, use an interbank transfer.',
-                    style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.45)),
-                  ),
+                  if (_resolvingName)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Row(
+                        children: [
+                          SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.emeraldLight)),
+                          SizedBox(width: 10),
+                          Text('Looking up account...', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        ],
+                      ),
+                    )
+                  else if (_resolvedName != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person_pin, color: AppTheme.emeraldLight, size: 18),
+                          const SizedBox(width: 8),
+                          Text('Recipient: $_resolvedName', style: const TextStyle(color: AppTheme.emeraldLight, fontSize: 13, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        'Only accounts at this bank.',
+                        style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.45)),
+                      ),
+                    ),
                   const SizedBox(height: 20),
 
                   const Text('Amount',
@@ -312,7 +388,11 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
+                        errorText: _amountError,
                       ),
+                      onChanged: (_) {
+                        if (_amountError != null) setState(() => _amountError = null);
+                      },
                     ),
                   ),
                   const SizedBox(height: 20),

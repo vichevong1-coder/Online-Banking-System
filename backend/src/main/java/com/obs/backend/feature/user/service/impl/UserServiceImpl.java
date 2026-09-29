@@ -18,10 +18,12 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.obs.backend.security.jwt.RevokedTokenRepository revokedTokenRepository;
 
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, com.obs.backend.security.jwt.RevokedTokenRepository revokedTokenRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.revokedTokenRepository = revokedTokenRepository;
     }
 
     @Override
@@ -51,6 +53,9 @@ public class UserServiceImpl implements UserService {
         }
         user.changePassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+        
+        com.obs.backend.security.jwt.RevokedToken rt = new com.obs.backend.security.jwt.RevokedToken("USER-" + userId);
+        revokedTokenRepository.save(rt);
     }
 
     private UserProfileResponse toResponse(User u) {

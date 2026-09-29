@@ -36,6 +36,9 @@ public class OtpCode {
     @Column(name = "consumed_at")
     private Instant consumedAt;
 
+    @Column(name = "attempts", nullable = false)
+    private int attempts = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -76,6 +79,14 @@ public class OtpCode {
 
     public Instant getConsumedAt() {
         return consumedAt;
+    }
+
+    public int getAttempts() {
+        return attempts;
+    }
+
+    public void incrementAttempts() {
+        this.attempts++;
     }
 
     public Instant getCreatedAt() {

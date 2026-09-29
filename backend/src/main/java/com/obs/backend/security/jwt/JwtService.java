@@ -55,6 +55,7 @@ public class JwtService {
     private String generateToken(String subject, JwtTokenType type, Duration ttl) {
         Instant now = Instant.now();
         return Jwts.builder()
+                .id(java.util.UUID.randomUUID().toString())
                 .subject(subject)
                 .claim(TOKEN_TYPE_CLAIM, type.name())
                 .issuedAt(Date.from(now))

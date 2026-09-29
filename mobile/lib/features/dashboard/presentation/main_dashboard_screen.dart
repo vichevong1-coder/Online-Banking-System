@@ -39,7 +39,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     ];
 
     return GradientScaffold(
-      body: pages[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: pages,
+      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Color(0xE6041C18),

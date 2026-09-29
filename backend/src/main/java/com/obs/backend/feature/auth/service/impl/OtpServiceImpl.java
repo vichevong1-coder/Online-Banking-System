@@ -63,8 +63,16 @@ public class OtpServiceImpl implements OtpService {
         OtpCode otpCode = otpCodeRepository
                 .findFirstByUserIdAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(user.getId(), purpose)
                 .filter(candidate -> candidate.getExpiresAt().isAfter(Instant.now()))
-                .filter(candidate -> passwordEncoder.matches(code, candidate.getCodeHash()))
                 .orElseThrow(InvalidOtpException::new);
+
+        if (!passwordEncoder.matches(code, otpCode.getCodeHash())) {
+            otpCode.incrementAttempts();
+            if (otpCode.getAttempts() >= 5) {
+                otpCode.markConsumed();
+            }
+            otpCodeRepository.save(otpCode);
+            throw new InvalidOtpException();
+        }
 
         otpCode.markConsumed();
         otpCodeRepository.save(otpCode);

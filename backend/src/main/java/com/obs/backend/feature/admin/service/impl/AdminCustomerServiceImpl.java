@@ -12,8 +12,16 @@ import com.obs.backend.feature.admin.mapper.AdminCustomerMapper;
 import com.obs.backend.feature.admin.service.AdminCustomerService;
 import com.obs.backend.feature.user.entity.User;
 import com.obs.backend.feature.user.repository.UserRepository;
+import com.obs.backend.feature.admin.dto.CreateCustomerRequest;
+import com.obs.backend.feature.admin.dto.UpdateCustomerRequest;
+import com.obs.backend.feature.auth.exception.PhoneAlreadyRegisteredException;
+import com.obs.backend.security.AccountStatus;
 import com.obs.backend.security.Role;
 import java.util.List;
+import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -28,16 +36,26 @@ public class AdminCustomerServiceImpl implements AdminCustomerService {
     private final AccountRepository accountRepository;
     private final AdminCustomerMapper customerMapper;
     private final AccountMapper accountMapper;
+    private final com.obs.backend.feature.account.repository.TransactionRepository transactionRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    private final com.obs.backend.feature.account.service.AccountService accountService;
 
     public AdminCustomerServiceImpl(
             UserRepository userRepository,
             AccountRepository accountRepository,
             AdminCustomerMapper customerMapper,
-            AccountMapper accountMapper) {
+            AccountMapper accountMapper,
+            com.obs.backend.feature.account.repository.TransactionRepository transactionRepository,
+            PasswordEncoder passwordEncoder,
+            com.obs.backend.feature.account.service.AccountService accountService) {
         this.userRepository = userRepository;
         this.accountRepository = accountRepository;
         this.customerMapper = customerMapper;
         this.accountMapper = accountMapper;
+        this.transactionRepository = transactionRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.accountService = accountService;
     }
 
     @Override
@@ -73,6 +91,82 @@ public class AdminCustomerServiceImpl implements AdminCustomerService {
     public CustomerDetailResponse updateStatus(UUID customerId, UpdateCustomerStatusRequest request) {
         User customer = requireCustomer(customerId);
         customer.changeStatus(request.status());
+        return customerMapper.toDetail(customer);
+    }
+
+    @Override
+    @Transactional
+    public AccountResponse fundAccount(UUID customerId, UUID accountId, com.obs.backend.feature.admin.dto.FundAccountRequest request) {
+        requireCustomer(customerId);
+        com.obs.backend.feature.account.entity.Account account = accountRepository.findByIdAndUserId(accountId, customerId)
+                .orElseThrow(com.obs.backend.feature.account.exception.AccountNotFoundException::new);
+        
+        account.credit(request.amount());
+        account = accountRepository.saveAndFlush(account);
+        
+        transactionRepository.save(new com.obs.backend.feature.account.entity.Transaction(
+                account.getId(),
+                com.obs.backend.feature.account.entity.TransactionType.TRANSFER_IN,
+                request.amount(),
+                account.getCurrency(),
+                "Demo Funding",
+                account.getBalance(),
+                null // no transfer ID for a direct system fund
+        ));
+        
+        return accountMapper.toResponse(account);
+    }
+
+    @Override
+    @Transactional
+    public CustomerDetailResponse createCustomer(CreateCustomerRequest request) {
+        if (userRepository.existsByPhone(request.phone())) {
+            throw new PhoneAlreadyRegisteredException();
+        }
+
+        User customer = new User(
+                request.firstName(),
+                request.lastName(),
+                passwordEncoder.encode(request.password() != null ? request.password() : "default123"),
+                request.nidNumber(),
+                request.nidExpiryDate(),
+                request.dateOfBirth(),
+                request.gender(),
+                request.phone(),
+                Role.CUSTOMER,
+                AccountStatus.ACTIVE,
+                true // Since staff verified it
+        );
+        userRepository.save(customer);
+
+        // Usually staff would also create an account (e.g. SAVINGS)
+        accountService.openAccount(customer.getId(), new com.obs.backend.feature.account.dto.OpenAccountRequest(
+                com.obs.backend.feature.account.entity.AccountType.SAVINGS,
+                com.obs.backend.feature.account.entity.Currency.USD
+        ));
+
+        return customerMapper.toDetail(customer);
+    }
+
+    @Override
+    @Transactional
+    public CustomerDetailResponse updateCustomer(UUID customerId, UpdateCustomerRequest request) {
+        User customer = requireCustomer(customerId);
+
+        if (!customer.getPhone().equals(request.phone()) && userRepository.existsByPhone(request.phone())) {
+            throw new PhoneAlreadyRegisteredException();
+        }
+
+        customer.updateCustomerDetails(
+                request.firstName(),
+                request.lastName(),
+                request.phone(),
+                request.nidNumber(),
+                request.nidExpiryDate(),
+                request.dateOfBirth(),
+                request.gender()
+        );
+
         return customerMapper.toDetail(customer);
     }
 

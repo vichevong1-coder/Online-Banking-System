@@ -8,6 +8,7 @@ import {
   Settings,
   ShieldCheck,
   Users,
+  FileSearch,
 } from "lucide-react"
 
 import {
@@ -41,6 +42,7 @@ const NAV_ITEMS = [
   { to: "/transfers", label: "Transfers", icon: ArrowLeftRight },
   { to: "/bill-providers", label: "Bill Providers", icon: Receipt },
   { to: "/roles", label: "Roles & Staff", icon: ShieldCheck },
+  { to: "/audit-logs", label: "Audit Logs", icon: FileSearch },
   { to: "/settings", label: "Settings", icon: Settings },
 ]
 

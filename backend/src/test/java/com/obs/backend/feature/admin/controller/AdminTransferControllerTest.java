@@ -53,11 +53,11 @@ class AdminTransferControllerTest {
                         .content("{\"fromAccountId\": \"%s\", \"toAccountId\": \"%s\", \"amount\": 150.00, \"description\": \"Dinner\"}".formatted(acc1, acc2)))
                 .andExpect(status().isCreated());
 
-        // Make an external transfer
-        mockMvc.perform(post("/transfers/external")
+        // Make another internal transfer
+        mockMvc.perform(post("/transfers")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + customerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fromAccountId\": \"%s\", \"beneficiaryBankCode\": \"BANKKHPP\", \"beneficiaryAccountNumber\": \"1234567890\", \"currency\": \"USD\", \"amount\": 50.00, \"description\": \"Gift\"}".formatted(acc1)))
+                        .content("{\"fromAccountId\": \"%s\", \"toAccountId\": \"%s\", \"amount\": 50.00, \"description\": \"Gift\"}".formatted(acc1, acc2)))
                 .andExpect(status().isCreated());
 
         // Scoped to this test's own source account. The feed is system-wide, so an unscoped
@@ -110,8 +110,7 @@ class AdminTransferControllerTest {
                         .param("account", acc2)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content", hasSize(1)))
-                .andExpect(jsonPath("$.content[0].amount").value(150.0));
+                .andExpect(jsonPath("$.content", hasSize(2)));
     }
 
     /**

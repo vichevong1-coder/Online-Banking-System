@@ -3,7 +3,7 @@ import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/transfer/data/transfer_api.dart';
 import 'package:mobile/features/transfer/data/transfer_models.dart';
 import 'package:mobile/features/transfer/presentation/beneficiary_management_screen.dart';
-import 'package:mobile/features/transfer/presentation/interbank_transfer_screen.dart';
+
 import 'package:mobile/features/transfer/presentation/internal_transfer_screen.dart';
 import 'package:mobile/features/transfer/presentation/p2p_transfer_screen.dart';
 
@@ -100,25 +100,7 @@ class _TransfersTabScreenState extends State<TransfersTabScreen> {
                     MaterialPageRoute(builder: (_) => const P2pTransferScreen()),
                   ),
                 ),
-                const Divider(color: Colors.white12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0x3300FFB2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.account_balance, color: AppTheme.emeraldLight, size: 22),
-                  ),
-                  title: const Text('Transfer to Another Bank', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
-                  subtitle: const Text('Send to ABA, ACLEDA, Canadia or Wing', style: TextStyle(fontSize: 12, color: Colors.white60)),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white60),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const InterbankTransferScreen()),
-                  ),
-                ),
+
               ],
             ),
           ),
@@ -159,10 +141,11 @@ class _TransfersTabScreenState extends State<TransfersTabScreen> {
                     name: b.displayName,
                     icon: Icons.person,
                     isFavorite: b.favorite,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => InterbankTransferScreen(prefilledBeneficiary: b)),
-                    ),
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Interbank transfers disabled for this demo')),
+                      );
+                    },
                   ),
                 ),
               ],

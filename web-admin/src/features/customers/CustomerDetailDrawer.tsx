@@ -41,12 +41,14 @@ type Props = {
   error: string | null
   onClose: () => void
   onChangeStatus: (customerId: string, status: AccountStatus) => Promise<void>
+  onFundAccount: (customerId: string, accountId: string, amount: number) => Promise<void>
+  onEditCustomer?: () => void
 }
 
 // The detail half of screen 3: KYC data from US-054, accounts and balances from US-049.
 // The summary is passed alongside the detail so the header renders immediately on row click while
 // the two detail requests are still in flight.
-export function CustomerDetailDrawer({ summary, detail, accounts, error, onClose, onChangeStatus }: Props) {
+export function CustomerDetailDrawer({ summary, detail, accounts, error, onClose, onChangeStatus, onFundAccount, onEditCustomer }: Props) {
   const [pendingStatus, setPendingStatus] = useState<AccountStatus | null>(null)
 
   async function applyStatus(customerId: string, status: AccountStatus) {
@@ -64,12 +66,21 @@ export function CustomerDetailDrawer({ summary, detail, accounts, error, onClose
         {summary && (
           <>
             <SheetHeader>
-              <SheetTitle>
-                {summary.firstName} {summary.lastName}
-              </SheetTitle>
-              <SheetDescription>
-                {summary.phone} · registered {formatDate(summary.createdAt)}
-              </SheetDescription>
+              <div className="flex items-start justify-between">
+                <div>
+                  <SheetTitle>
+                    {summary.firstName} {summary.lastName}
+                  </SheetTitle>
+                  <SheetDescription>
+                    {summary.phone} · registered {formatDate(summary.createdAt)}
+                  </SheetDescription>
+                </div>
+                {onEditCustomer && detail && (
+                  <Button variant="outline" size="sm" onClick={onEditCustomer}>
+                    Edit
+                  </Button>
+                )}
+              </div>
             </SheetHeader>
 
             <div className="flex flex-col gap-6 px-4 pb-6">
@@ -145,9 +156,23 @@ export function CustomerDetailDrawer({ summary, detail, accounts, error, onClose
                               {account.accountType.toLowerCase()} · {account.currency}
                             </span>
                           </div>
-                          <span className="text-sm font-medium tabular-nums">
-                            {formatMoney(account.balance, account.currency)}
-                          </span>
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm font-medium tabular-nums">
+                              {formatMoney(account.balance, account.currency)}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => {
+                                const amount = window.prompt(`Enter amount to add to ${account.accountNumber}:`);
+                                if (amount && !isNaN(Number(amount)) && Number(amount) > 0) {
+                                  onFundAccount(summary.id, account.id, Number(amount));
+                                }
+                              }}
+                            >
+                              Add Funds
+                            </Button>
+                          </div>
                         </li>
                       ))}
                     </ul>

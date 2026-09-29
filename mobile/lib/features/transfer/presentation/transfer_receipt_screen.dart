@@ -170,9 +170,32 @@ class TransferReceiptScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
-            PrimaryActionButton(
-              title: 'DONE',
-              onPressed: () => Navigator.pop(context),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Colors.white24),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Sharing coming soon...')),
+                      );
+                    },
+                    icon: const Icon(Icons.share_outlined, color: Colors.white, size: 20),
+                    label: const Text('SHARE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: PrimaryActionButton(
+                    title: 'DONE',
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
           ],
