@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Primary;
 /**
  * OTP codes are stored hashed, so tests can't recover them from the database. This bean captures
  * the last code sent per phone number, standing in for the real SMS provider (@Primary overrides
- * the log-only LoggingSmsSender regardless of active profile).
+ * the dev DevSmsSender regardless of active profile).
  */
 @TestConfiguration
 public class RecordingOtpSenderConfig {

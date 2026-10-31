@@ -50,8 +50,8 @@ public class StatementServiceImpl implements StatementService {
                 accountRepository.findByIdAndUserId(accountId, userId).orElseThrow(AccountNotFoundException::new);
         User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
-        LocalDate effectiveFrom = fromDate != null ? fromDate : LocalDate.now().withDayOfMonth(1);
-        LocalDate effectiveTo = toDate != null ? toDate : LocalDate.now();
+        LocalDate effectiveFrom = fromDate != null ? fromDate : LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1);
+        LocalDate effectiveTo = toDate != null ? toDate : LocalDate.now(ZoneOffset.UTC);
 
         List<Transaction> transactions = transactionRepository
                 .findByAccountIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtAsc(

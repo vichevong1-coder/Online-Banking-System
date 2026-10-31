@@ -95,8 +95,8 @@ INSERT INTO users (id, first_name, last_name, password_hash, email, nid_number,
  'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '100 days');
 
 -- ------------------------------------------------------------------- staff
--- US-047/US-051. Staff are ADMIN-role users: Role has exactly CUSTOMER and
--- ADMIN, and AdminStaffServiceImpl lists staff with findByRoleOrderByCreatedAtDesc(ADMIN),
+-- US-047/US-051. Staff are ADMIN or TELLER users: Role is CUSTOMER | ADMIN | TELLER, and
+-- AdminStaffServiceImpl lists staff with findByRoleInOrderByCreatedAtDesc(ADMIN, TELLER),
 -- so without these rows /admin/staff shows only the bootstrap admin from V2.
 --
 -- KYC columns stay NULL, the same reason V2 relaxed them: an admin has no ID

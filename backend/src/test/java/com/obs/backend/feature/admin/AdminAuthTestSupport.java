@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.jayway.jsonpath.JsonPath;
 import com.obs.backend.feature.auth.RecordingOtpSenderConfig.RecordingOtpSender;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -39,6 +40,40 @@ public final class AdminAuthTestSupport {
                                 .content(
                                         "{\"challengeToken\": \"%s\", \"code\": \"%s\"}"
                                                 .formatted(challengeToken, code)))
+                .andExpect(status().isOk())
+                .andReturn();
+        return JsonPath.read(verifyResult.getResponse().getContentAsString(), "$.accessToken");
+    }
+
+    public static String createTellerAndGetAccessToken(
+            MockMvc mockMvc, RecordingOtpSender otpSender, String email, String phone, String password) throws Exception {
+        String adminToken = adminLoginAndGetAccessToken(mockMvc, otpSender);
+        mockMvc.perform(post("/admin/staff")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "firstName": "Teller",
+                                  "lastName": "Staff",
+                                  "email": "%s",
+                                  "phone": "%s",
+                                  "role": "TELLER",
+                                  "password": "%s"
+                                }
+                                """.formatted(email, phone, password)))
+                .andExpect(status().isCreated());
+
+        MvcResult loginResult = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\": \"%s\", \"password\": \"%s\"}".formatted(email, password)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String challengeToken = JsonPath.read(loginResult.getResponse().getContentAsString(), "$.challengeToken");
+        String code = otpSender.lastCodeFor(phone);
+
+        MvcResult verifyResult = mockMvc.perform(post("/auth/2fa/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"challengeToken\": \"%s\", \"code\": \"%s\"}".formatted(challengeToken, code)))
                 .andExpect(status().isOk())
                 .andReturn();
         return JsonPath.read(verifyResult.getResponse().getContentAsString(), "$.accessToken");

@@ -6,7 +6,7 @@
 -- All 5 share the password "Passw0rd1!" (hashes below are bcrypt of that string, same
 -- BCryptPasswordEncoder the app uses). phone_verified is TRUE and status is ACTIVE, so each
 -- can go through the normal POST /auth/login -> POST /auth/2fa/verify flow immediately —
--- the OTP code for 2FA still goes through the real flow (logged by LoggingSmsSender in dev).
+-- the OTP code for 2FA still goes through the real flow (DevSmsSender in dev: see http://localhost:8080/dev/sms, Mailpit, or the backend log).
 --
 -- Re-runnable: ON CONFLICT (phone) DO NOTHING skips rows that already exist.
 

@@ -9,6 +9,7 @@ import com.obs.backend.feature.kyc.dto.KycUploadResponse;
 import com.obs.backend.feature.kyc.dto.PendingKycSummaryResponse;
 import com.obs.backend.feature.kyc.entity.KycDocument;
 import com.obs.backend.feature.kyc.entity.KycDocumentType;
+import com.obs.backend.feature.kyc.exception.IncompleteKycDocumentsException;
 import com.obs.backend.feature.kyc.exception.KycException;
 import com.obs.backend.feature.kyc.mapper.KycMapper;
 import com.obs.backend.feature.kyc.repository.KycDocumentRepository;
@@ -143,7 +144,7 @@ public class KycServiceImpl implements KycService {
         User user = requirePending(userId);
         List<KycDocument> documents = documentRepository.findByUserIdOrderByTypeAsc(userId);
         if (documents.size() < REQUIRED.size()) {
-            throw KycException.incomplete();
+            throw new IncompleteKycDocumentsException();
         }
         user.approveKyc(reviewerId);
         auditService.logAction("KYC_APPROVED", userId.toString(), "USER", "KYC application approved");
@@ -154,6 +155,9 @@ public class KycServiceImpl implements KycService {
     @Transactional
     public KycApplicationResponse reject(UUID userId, UUID reviewerId, String reason) {
         User user = requirePending(userId);
+        if (reason == null || reason.isBlank()) {
+            throw KycException.invalidReason("Rejection reason cannot be blank");
+        }
         user.rejectKyc(reviewerId, reason.trim());
         auditService.logAction("KYC_REJECTED", userId.toString(), "USER", "KYC application rejected");
         return mapper.toApplication(user, documentRepository.findByUserIdOrderByTypeAsc(userId));

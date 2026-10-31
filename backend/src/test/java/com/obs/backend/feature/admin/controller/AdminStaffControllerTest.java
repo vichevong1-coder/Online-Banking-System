@@ -110,6 +110,57 @@ class AdminStaffControllerTest {
     }
 
     @Test
+    void createStaffRejectsCustomerRole() throws Exception {
+        String adminToken = adminLoginAndGetAccessToken(mockMvc, otpSender);
+
+        mockMvc.perform(post("/admin/staff")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "firstName": "Not",
+                                  "lastName": "Staff",
+                                  "email": "notstaff@obs.local",
+                                  "phone": "+855-16-000-004",
+                                  "role": "CUSTOMER",
+                                  "password": "Password123!"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_STAFF_ROLE"));
+    }
+
+    @Test
+    void updateStaffRoleRejectsCustomerRole() throws Exception {
+        String adminToken = adminLoginAndGetAccessToken(mockMvc, otpSender);
+
+        MvcResult created = mockMvc.perform(post("/admin/staff")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "firstName": "Teller",
+                                  "lastName": "One",
+                                  "email": "teller1@obs.local",
+                                  "phone": "+855-16-000-005",
+                                  "role": "TELLER",
+                                  "password": "Password123!"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role").value("TELLER"))
+                .andReturn();
+        String staffId = JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(patch("/admin/staff/" + staffId + "/role")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\": \"CUSTOMER\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_STAFF_ROLE"));
+    }
+
+    @Test
     void customerTokenIsForbidden() throws Exception {
         String customerToken =
                 registerVerifyLoginAndGetAccessToken(mockMvc, otpSender, "+855-16-000-003", "correct-horse");

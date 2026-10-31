@@ -4,6 +4,7 @@ import com.obs.backend.feature.admin.dto.CreateStaffRequest;
 import com.obs.backend.feature.admin.dto.StaffResponse;
 import com.obs.backend.feature.admin.dto.UpdateStaffRoleRequest;
 import com.obs.backend.feature.admin.exception.EmailAlreadyRegisteredException;
+import com.obs.backend.feature.admin.exception.InvalidStaffRoleException;
 import com.obs.backend.feature.admin.exception.StaffNotFoundException;
 import com.obs.backend.feature.admin.mapper.AdminStaffMapper;
 import com.obs.backend.feature.admin.service.AdminStaffService;
@@ -44,6 +45,7 @@ public class AdminStaffServiceImpl implements AdminStaffService {
     @Override
     @Transactional
     public StaffResponse createStaff(CreateStaffRequest request) {
+        requireStaffRole(request.role());
         if (userRepository.existsByEmail(request.email())) {
             throw new EmailAlreadyRegisteredException(request.email());
         }
@@ -66,10 +68,19 @@ public class AdminStaffServiceImpl implements AdminStaffService {
     @Override
     @Transactional
     public StaffResponse updateStaffRole(UUID staffId, UpdateStaffRoleRequest request) {
+        requireStaffRole(request.role());
         User staff = userRepository.findByIdAndRoleIn(staffId, List.of(Role.ADMIN, Role.TELLER))
                 .orElseThrow(() -> new StaffNotFoundException(staffId));
         staff.changeRole(request.role());
         User saved = userRepository.save(staff);
         return adminStaffMapper.toResponse(saved);
+    }
+
+    // A CUSTOMER "staff" row would vanish from the staff list (it only lists ADMIN and TELLER)
+    // and could never be edited again, so reject it up front.
+    private static void requireStaffRole(Role role) {
+        if (role != Role.ADMIN && role != Role.TELLER) {
+            throw new InvalidStaffRoleException(role);
+        }
     }
 }

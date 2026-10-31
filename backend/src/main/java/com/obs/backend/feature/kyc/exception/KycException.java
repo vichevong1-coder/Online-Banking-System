@@ -7,7 +7,7 @@ public class KycException extends RuntimeException {
     private final HttpStatus status;
     private final String code;
 
-    private KycException(HttpStatus status, String code, String message) {
+    protected KycException(HttpStatus status, String code, String message) {
         super(message);
         this.status = status;
         this.code = code;
@@ -22,7 +22,9 @@ public class KycException extends RuntimeException {
     }
 
     public static KycException invalidUploadToken() {
-        return new KycException(HttpStatus.UNAUTHORIZED, "INVALID_OR_EXPIRED_UPLOAD_TOKEN",
+        return new KycException(
+                HttpStatus.UNAUTHORIZED,
+                "INVALID_OR_EXPIRED_UPLOAD_TOKEN",
                 "Upload token is invalid or expired");
     }
 
@@ -30,8 +32,14 @@ public class KycException extends RuntimeException {
         return new KycException(HttpStatus.BAD_REQUEST, "INVALID_KYC_DOCUMENT", message);
     }
 
+    public static KycException invalidReason(String message) {
+        return new KycException(HttpStatus.BAD_REQUEST, "INVALID_REJECTION_REASON", message);
+    }
+
     public static KycException uploadNotAllowed() {
-        return new KycException(HttpStatus.CONFLICT, "KYC_UPLOAD_NOT_ALLOWED",
+        return new KycException(
+                HttpStatus.CONFLICT,
+                "KYC_UPLOAD_NOT_ALLOWED",
                 "This account is not awaiting document review");
     }
 
@@ -48,12 +56,13 @@ public class KycException extends RuntimeException {
     }
 
     public static KycException incomplete() {
-        return new KycException(HttpStatus.CONFLICT, "KYC_DOCUMENTS_INCOMPLETE",
-                "Front, back and selfie images are all required before approval");
+        return new IncompleteKycDocumentsException();
     }
 
     public static KycException reviewRequired() {
-        return new KycException(HttpStatus.CONFLICT, "KYC_REVIEW_REQUIRED",
+        return new KycException(
+                HttpStatus.CONFLICT,
+                "KYC_REVIEW_REQUIRED",
                 "Use the KYC approve/reject endpoints for accounts in review");
     }
 }

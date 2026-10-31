@@ -50,7 +50,7 @@ public class AdminKycController {
         return kycService.getApplication(userId);
     }
 
-    @GetMapping("/{userId}/documents/{type}/image")
+    @GetMapping({"/{userId}/documents/{type}", "/{userId}/documents/{type}/image"})
     public ResponseEntity<byte[]> image(@PathVariable UUID userId, @PathVariable KycDocumentType type) {
         KycImage image = kycService.getImage(userId, type);
         return ResponseEntity.ok()

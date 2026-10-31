@@ -29,6 +29,12 @@ public class AdminExceptionHandler {
         return new ErrorResponse("INVALID_CURRENT_PASSWORD", e.getMessage());
     }
 
+    @ExceptionHandler(InvalidStaffRoleException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidStaffRole(InvalidStaffRoleException e) {
+        return new ErrorResponse("INVALID_STAFF_ROLE", e.getMessage());
+    }
+
     @ExceptionHandler(EmailAlreadyRegisteredException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorResponse handleEmailAlreadyRegistered(EmailAlreadyRegisteredException e) {
