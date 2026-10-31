@@ -34,6 +34,8 @@ class FakeAuthApi extends Fake implements AuthApi {
     this.registerError,
     this.uploadToken = 'upload-token',
     this.uploadFailures = 0,
+    this.loginError,
+    this.loginResponse,
   });
 
   final Object? registerError;
@@ -44,9 +46,23 @@ class FakeAuthApi extends Fake implements AuthApi {
   /// How many upload calls fail before they start succeeding.
   int uploadFailures;
 
+  final Object? loginError;
+  final LoginResponse? loginResponse;
+
   int registerCalls = 0;
   int verifyCalls = 0;
+  int loginCalls = 0;
   final List<({String token, KycDocumentType type})> uploads = [];
+
+  @override
+  Future<LoginResponse> login({
+    required String phone,
+    required String password,
+  }) async {
+    loginCalls++;
+    if (loginError != null) throw loginError!;
+    return loginResponse ?? LoginResponse(challengeToken: 'test-challenge');
+  }
 
   @override
   Future<void> register(RegisterRequest request) async {

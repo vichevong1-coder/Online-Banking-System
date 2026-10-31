@@ -89,13 +89,16 @@ class CambodianPhoneFormatter extends TextInputFormatter {
 }
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final AuthApi? authApi;
+
+  const LoginScreen({super.key, this.authApi});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  late final AuthApi _api = widget.authApi ?? AuthApi();
   final _phoneController = TextEditingController(text: '+855 ');
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -146,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final response = await AuthApi().login(
+      final response = await _api.login(
         phone: normalizedPhone,
         password: password,
       );

@@ -82,7 +82,7 @@ void main() {
 
       await tester.runAsync(() async {
         await tester.tap(downloadButton);
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 500));
       });
       await tester.pumpAndSettle();
 
