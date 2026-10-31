@@ -55,7 +55,7 @@ class OtpControllerTest {
                         post("/auth/otp/verify")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"phone\": \"%s\", \"code\": \"%s\"}".formatted(PHONE, code)))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
 
         assertThat(userRepository.findByPhone(PHONE).orElseThrow().isPhoneVerified()).isTrue();
     }
@@ -96,7 +96,7 @@ class OtpControllerTest {
                         post("/auth/otp/verify")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"phone\": \"%s\", \"code\": \"%s\"}".formatted(PHONE, resentCode)))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
     }
 
     @Test

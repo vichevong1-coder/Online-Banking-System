@@ -27,4 +27,16 @@ class AccountStatusPolicyTest {
         assertThatExceptionOfType(LockedException.class)
                 .isThrownBy(() -> policy.checkLoginAllowed(AccountStatus.LOCKED));
     }
+
+    @Test
+    void pendingApprovalAccountIsRejected() {
+        assertThatExceptionOfType(AccountPendingApprovalException.class)
+                .isThrownBy(() -> policy.checkLoginAllowed(AccountStatus.PENDING_APPROVAL));
+    }
+
+    @Test
+    void rejectedAccountIsRejected() {
+        assertThatExceptionOfType(AccountRejectedException.class)
+                .isThrownBy(() -> policy.checkLoginAllowed(AccountStatus.REJECTED));
+    }
 }

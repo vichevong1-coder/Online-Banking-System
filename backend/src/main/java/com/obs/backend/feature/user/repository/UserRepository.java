@@ -28,6 +28,20 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     long countByRole(Role role);
 
+    // Applications ready for staff review: still pending and holding every required KYC image.
+    // Customers who registered but never finished uploading are left out of the queue.
+    @Query("""
+            SELECT u FROM User u
+            WHERE u.role = :role
+              AND u.status = :status
+              AND (SELECT COUNT(d) FROM KycDocument d WHERE d.userId = u.id) >= :requiredDocuments
+            """)
+    Page<User> findAwaitingReview(
+            @Param("role") Role role,
+            @Param("status") com.obs.backend.security.AccountStatus status,
+            @Param("requiredDocuments") long requiredDocuments,
+            Pageable pageable);
+
     // `users` holds customers and staff in one table, so every admin-facing customer query has to
     // filter by role — otherwise the bootstrap admin and every staff account US-047 creates show up
     // in the customer list. Filtering here rather than in the service keeps that impossible to forget.

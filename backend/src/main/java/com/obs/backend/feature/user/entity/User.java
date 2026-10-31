@@ -68,6 +68,15 @@ public class User {
     @Column(name = "phone_verified", nullable = false)
     private boolean phoneVerified;
 
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
+    @Column(name = "reviewed_by")
+    private UUID reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -135,6 +144,34 @@ public class User {
      */
     public void changeStatus(AccountStatus newStatus) {
         this.status = newStatus;
+    }
+
+    /** KYC review outcome: PENDING_APPROVAL → ACTIVE. */
+    public void approveKyc(UUID reviewerId) {
+        this.status = AccountStatus.ACTIVE;
+        this.reviewedBy = reviewerId;
+        this.reviewedAt = Instant.now();
+        this.rejectionReason = null;
+    }
+
+    /** KYC review outcome: PENDING_APPROVAL → REJECTED, recording why. */
+    public void rejectKyc(UUID reviewerId, String reason) {
+        this.status = AccountStatus.REJECTED;
+        this.reviewedBy = reviewerId;
+        this.reviewedAt = Instant.now();
+        this.rejectionReason = reason;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public UUID getReviewedBy() {
+        return reviewedBy;
+    }
+
+    public Instant getReviewedAt() {
+        return reviewedAt;
     }
 
     public void setEmail(String email) {

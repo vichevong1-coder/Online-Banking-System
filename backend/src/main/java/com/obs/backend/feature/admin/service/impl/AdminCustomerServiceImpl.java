@@ -90,8 +90,17 @@ public class AdminCustomerServiceImpl implements AdminCustomerService {
     @Transactional
     public CustomerDetailResponse updateStatus(UUID customerId, UpdateCustomerStatusRequest request) {
         User customer = requireCustomer(customerId);
+        // Moving into or out of the KYC states would skip image review and the audit trail
+        // that /admin/kyc/{id}/approve|reject provide.
+        if (isKycState(customer.getStatus()) || isKycState(request.status())) {
+            throw com.obs.backend.feature.kyc.exception.KycException.reviewRequired();
+        }
         customer.changeStatus(request.status());
         return customerMapper.toDetail(customer);
+    }
+
+    private static boolean isKycState(AccountStatus status) {
+        return status == AccountStatus.PENDING_APPROVAL || status == AccountStatus.REJECTED;
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.obs.backend.feature.auth.controller;
 
 import com.obs.backend.feature.auth.dto.OtpResendRequest;
 import com.obs.backend.feature.auth.dto.OtpVerifyRequest;
+import com.obs.backend.feature.auth.dto.OtpVerifyResponse;
 import com.obs.backend.feature.auth.service.OtpService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -22,9 +23,8 @@ public class OtpController {
     }
 
     @PostMapping("/verify")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void verify(@Valid @RequestBody OtpVerifyRequest request) {
-        otpService.verifyRegistration(request.phone().trim(), request.code());
+    public OtpVerifyResponse verify(@Valid @RequestBody OtpVerifyRequest request) {
+        return otpService.verifyRegistration(request.phone().trim(), request.code());
     }
 
     @PostMapping("/resend")

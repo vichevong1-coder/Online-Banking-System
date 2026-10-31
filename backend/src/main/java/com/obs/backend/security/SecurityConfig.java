@@ -64,6 +64,10 @@ public class SecurityConfig {
                                 "/auth/password/forgot",
                                 "/auth/password/reset")
                         .permitAll()
+                        // Signup image uploads: the caller has no access token yet. KycServiceImpl
+                        // validates the KYC_UPLOAD bearer token itself.
+                        .requestMatchers(HttpMethod.POST, "/auth/kyc/documents/*")
+                        .permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",

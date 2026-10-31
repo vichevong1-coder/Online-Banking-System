@@ -17,6 +17,8 @@ public class AccountStatusPolicy {
             }
             case SUSPENDED -> throw new DisabledException("Account is suspended");
             case LOCKED -> throw new LockedException("Account is locked");
+            case PENDING_APPROVAL -> throw new AccountPendingApprovalException();
+            case REJECTED -> throw new AccountRejectedException();
         }
     }
 }

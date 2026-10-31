@@ -143,7 +143,7 @@ class RegistrationControllerTest {
         assertThat(saved.getPasswordHash()).isNotEqualTo("correct-horse");
         assertThat(passwordEncoder.matches("correct-horse", saved.getPasswordHash())).isTrue();
         assertThat(saved.getRole()).isEqualTo(Role.CUSTOMER);
-        assertThat(saved.getStatus()).isEqualTo(AccountStatus.ACTIVE);
+        assertThat(saved.getStatus()).isEqualTo(AccountStatus.PENDING_APPROVAL);
         assertThat(saved.isPhoneVerified()).isFalse();
     }
 }

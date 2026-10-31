@@ -21,6 +21,7 @@ public class JwtService {
 
     private static final String TOKEN_TYPE_CLAIM = "type";
     private static final String ROLES_CLAIM = "roles";
+    private static final Duration KYC_UPLOAD_TTL = Duration.ofMinutes(30);
 
     private final JwtProperties properties;
     private final SecretKey signingKey;
@@ -50,6 +51,19 @@ public class JwtService {
 
     public String generateChallengeToken(String subject) {
         return generateToken(subject, JwtTokenType.CHALLENGE, properties.challengeTokenTtl());
+    }
+
+    /**
+     * A pending customer has no access token yet, so the NID and selfie uploads need their own
+     * credential. This one is only accepted by the KYC upload endpoint (the bearer filter accepts
+     * ACCESS tokens only) and is scoped to a single user.
+     */
+    public String generateKycUploadToken(String subject) {
+        return generateToken(subject, JwtTokenType.KYC_UPLOAD, KYC_UPLOAD_TTL);
+    }
+
+    public Optional<String> resolveKycUploadSubject(String token) {
+        return parseIfType(token, JwtTokenType.KYC_UPLOAD).map(Claims::getSubject);
     }
 
     private String generateToken(String subject, JwtTokenType type, Duration ttl) {

@@ -1,6 +1,8 @@
 package com.obs.backend.feature.auth.exception;
 
 import com.obs.backend.feature.auth.dto.ErrorResponse;
+import com.obs.backend.security.AccountPendingApprovalException;
+import com.obs.backend.security.AccountRejectedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
@@ -64,6 +66,18 @@ public class AuthExceptionHandler {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ErrorResponse handleSuspendedAccount(DisabledException e) {
         return new ErrorResponse("ACCOUNT_SUSPENDED", e.getMessage());
+    }
+
+    @ExceptionHandler(AccountPendingApprovalException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handlePendingApproval(AccountPendingApprovalException e) {
+        return new ErrorResponse("ACCOUNT_PENDING_APPROVAL", e.getMessage());
+    }
+
+    @ExceptionHandler(AccountRejectedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleRejected(AccountRejectedException e) {
+        return new ErrorResponse("ACCOUNT_REJECTED", e.getMessage());
     }
 
     @ExceptionHandler(LockedException.class)

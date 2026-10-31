@@ -78,11 +78,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 loginAttemptService.recordAttempt(identifier, false, null, null);
                 throw new InvalidCredentialsException();
             }
-            accountStatusPolicy.checkLoginAllowed(user.getStatus());
+            // Phone verification comes first: a new customer is PENDING_APPROVAL from the moment
+            // they register, and one who has not finished the OTP step must be sent back to it,
+            // not told their account awaits approval.
             if (user.getRole() == Role.CUSTOMER && !user.isPhoneVerified()) {
                 loginAttemptService.recordAttempt(identifier, false, null, null);
                 throw new PhoneNotVerifiedException();
             }
+            accountStatusPolicy.checkLoginAllowed(user.getStatus());
 
             otpService.generateAndSend(user, OtpPurpose.LOGIN);
             String challengeToken = jwtService.generateChallengeToken(user.getId().toString());

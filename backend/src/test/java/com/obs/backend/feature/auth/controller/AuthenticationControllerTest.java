@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import com.obs.backend.feature.account.AuthTestSupport;
 import com.obs.backend.feature.auth.RecordingOtpSenderConfig;
 import com.obs.backend.feature.auth.RecordingOtpSenderConfig.RecordingOtpSender;
 import jakarta.persistence.EntityManager;
@@ -206,6 +207,13 @@ class AuthenticationControllerTest {
     void customerCannotLoginBeforePhoneIsVerified() throws Exception {
         mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(REGISTER_BODY))
                 .andExpect(status().isCreated());
+        // New customers are PENDING_APPROVAL, which is checked before the phone. Activate the row
+        // directly so this test isolates the unverified-phone rule.
+        entityManager
+                .createQuery("update User u set u.status = com.obs.backend.security.AccountStatus.ACTIVE"
+                        + " where u.phone = :phone")
+                .setParameter("phone", CUSTOMER_PHONE)
+                .executeUpdate();
 
         mockMvc.perform(
                         post("/auth/login")
@@ -218,17 +226,31 @@ class AuthenticationControllerTest {
     }
 
     @Test
-    void customerLogsInByPhoneAfterVerification() throws Exception {
+    void customerAwaitingApprovalCannotLogin() throws Exception {
         mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(REGISTER_BODY))
                 .andExpect(status().isCreated());
-        String registrationCode = otpSender.lastCodeFor(CUSTOMER_PHONE);
+        AuthTestSupport.verifyRegistrationOtp(mockMvc, otpSender, CUSTOMER_PHONE);
+
         mockMvc.perform(
-                        post("/auth/otp/verify")
+                        post("/auth/login")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
-                                        "{\"phone\": \"%s\", \"code\": \"%s\"}"
-                                                .formatted(CUSTOMER_PHONE, registrationCode)))
-                .andExpect(status().isNoContent());
+                                        "{\"phone\": \"%s\", \"password\": \"%s\"}"
+                                                .formatted(CUSTOMER_PHONE, CUSTOMER_PASSWORD)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("ACCOUNT_PENDING_APPROVAL"));
+    }
+
+    @Test
+    void customerLogsInByPhoneAfterVerificationAndApproval() throws Exception {
+        MvcResult registered = mockMvc.perform(
+                        post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(REGISTER_BODY))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String userId = JsonPath.read(registered.getResponse().getContentAsString(), "$.id");
+        String uploadToken = AuthTestSupport.verifyRegistrationOtp(mockMvc, otpSender, CUSTOMER_PHONE);
+        AuthTestSupport.uploadAllDocuments(mockMvc, uploadToken);
+        AuthTestSupport.approveAsAdmin(mockMvc, otpSender, userId);
 
         String challengeToken = login(null, CUSTOMER_PHONE, CUSTOMER_PASSWORD);
         String loginCode = otpSender.lastCodeFor(CUSTOMER_PHONE);

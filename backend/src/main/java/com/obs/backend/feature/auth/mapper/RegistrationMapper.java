@@ -21,7 +21,7 @@ public class RegistrationMapper {
                 request.gender(),
                 normalizedPhone,
                 Role.CUSTOMER,
-                AccountStatus.ACTIVE,
+                AccountStatus.PENDING_APPROVAL,
                 false);
     }
 

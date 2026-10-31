@@ -1,5 +1,6 @@
 package com.obs.backend.feature.auth.service.impl;
 
+import com.obs.backend.feature.auth.dto.OtpVerifyResponse;
 import com.obs.backend.feature.auth.entity.OtpCode;
 import com.obs.backend.feature.auth.entity.OtpPurpose;
 import com.obs.backend.feature.auth.exception.InvalidOtpException;
@@ -9,6 +10,8 @@ import com.obs.backend.feature.auth.service.OtpSender;
 import com.obs.backend.feature.auth.service.OtpService;
 import com.obs.backend.feature.user.entity.User;
 import com.obs.backend.feature.user.repository.UserRepository;
+import com.obs.backend.security.AccountStatus;
+import com.obs.backend.security.jwt.JwtService;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -27,17 +30,20 @@ public class OtpServiceImpl implements OtpService {
     private final UserRepository userRepository;
     private final OtpSender otpSender;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public OtpServiceImpl(
             OtpCodeRepository otpCodeRepository,
             UserRepository userRepository,
             OtpSender otpSender,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService) {
         this.otpCodeRepository = otpCodeRepository;
         this.userRepository = userRepository;
         this.otpSender = otpSender;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     @Override
@@ -80,11 +86,15 @@ public class OtpServiceImpl implements OtpService {
 
     @Override
     @Transactional
-    public void verifyRegistration(String phone, String code) {
+    public OtpVerifyResponse verifyRegistration(String phone, String code) {
         User user = userRepository.findByPhone(phone).orElseThrow(UserNotFoundException::new);
         verify(user, OtpPurpose.REGISTRATION, code);
         user.markPhoneVerified();
         userRepository.save(user);
+        String uploadToken = user.getStatus() == AccountStatus.PENDING_APPROVAL
+                ? jwtService.generateKycUploadToken(user.getId().toString())
+                : null;
+        return new OtpVerifyResponse(uploadToken);
     }
 
     @Override
