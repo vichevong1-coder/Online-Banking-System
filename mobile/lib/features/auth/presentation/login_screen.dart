@@ -51,6 +51,21 @@ String normalizePhoneToE164(String input) {
   return '+855$digits';
 }
 
+/// Customer-facing text for a failed sign-in. Accounts still under KYC review
+/// or turned down get a plain explanation instead of the raw server message.
+String loginErrorMessage(ApiException e) {
+  switch (e.code) {
+    case 'ACCOUNT_PENDING_APPROVAL':
+      return 'Your application is still being reviewed. '
+          "We'll let you know once your account is approved.";
+    case 'ACCOUNT_REJECTED':
+      return "We couldn't approve your application. "
+          'Please contact support or visit a branch for help.';
+    default:
+      return e.message;
+  }
+}
+
 class CambodianPhoneFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -147,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } on ApiException catch (e) {
-      setState(() => _errorMessage = e.message);
+      setState(() => _errorMessage = loginErrorMessage(e));
     } catch (_) {
       setState(
         () => _errorMessage = "Couldn't sign in. Please check your connection.",
