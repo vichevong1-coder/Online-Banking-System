@@ -23,7 +23,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - **US-058 Rate Limiting is a retrofit.** You are adding protection to endpoints already written without it (`POST /auth/login`, `POST /auth/otp/verify`, `/auth/2fa/verify`, etc.). Do not rebuild the endpoints; wrap them.
 - **OTP Guesses & Token Replay (US-059).** The OTP has no attempt counter, and challenge tokens are replayable for their full 5-minute TTL. Fix both together: add an `attempts` column to `otp_codes`, put a `jti` in the challenge token, and invalidate the pair on success or at the 5-attempt limit.
 - **Refresh Token Revocation.** Changing a password (US-036) *must* revoke existing refresh tokens. Implement a `revoked_tokens` table and `POST /auth/logout`.
-- **Live SMS Swap (US-060) is just a swap.** You are replacing `LoggingSmsSender` with a live provider (like Twilio) behind the same `OtpSender` interface. This is an hour of work, not a sprint's worth.
+- **Live SMS Swap (US-060) is just a swap.** You are replacing the dev stub (`DevSmsSender`, originally `LoggingSmsSender`) with a live provider (like Twilio) behind the same `OtpSender` interface. This is an hour of work, not a sprint's worth.
 
 ## Audit & Web Admin
 
@@ -44,7 +44,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
   - [x] Implement `POST /auth/logout`.
   - [x] Revoke tokens upon password change (US-036).
 - [x] **US-060** Notifications – email / SMS provider integration `[BE]`
-  - Swap `LoggingSmsSender` for a live provider.
+  - Swap the dev stub (`DevSmsSender`) for a live provider (`TwilioSmsSender`, active outside the dev profile).
 
 ## Mobile: Bills, Cards & Recovery (`mobile/`)
 

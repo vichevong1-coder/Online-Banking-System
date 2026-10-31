@@ -36,9 +36,16 @@ docker compose down -v      # stop and wipe the database
 Credentials match `.github/workflows/backend-ci.yml` so local runs and CI behave the same. Override
 them by copying `.env.example` to `.env` at the repo root.
 
-> **Email is real; SMS is not.** OTP and statement emails are genuinely delivered over SMTP and
-> readable in the Mailpit inbox. The SMS channel is a logging stub for the whole project — phone
-> OTPs are written to the backend log, never sent. See `docs/sprint-plan-review.md`.
+> **Statement email is real; SMS is a dev stub.** Statement emails are delivered over SMTP and
+> readable in the Mailpit inbox. Phone OTPs are never sent to a handset in dev. Instead, the
+> backend (dev profile) shows each "SMS" in three places:
+>
+> - the SMS inbox page at **http://localhost:8080/dev/sms** (open it on a second screen while you
+>   sign in; new codes appear within 2 seconds)
+> - a copy in Mailpit at http://localhost:8025 (subject `SMS to <phone>`)
+> - the backend log
+>
+> `/dev/**` is unauthenticated and only exists in the dev profile. See `docs/sprint-plan.md`.
 
 ### Backend (`backend/`)
 ```bash

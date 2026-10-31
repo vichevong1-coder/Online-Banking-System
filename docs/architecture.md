@@ -65,14 +65,14 @@ plus a local `exception/` where the feature has its own error types.
 
 | Package | Status | Contents |
 |---|---|---|
-| `feature/auth` | BUILT | Registration, OTP, login, 2FA, refresh. `OtpSender` + `LoggingSmsSender`. |
+| `feature/auth` | BUILT | Registration, OTP, login, 2FA, refresh. `OtpSender` + `DevSmsSender`. |
 | `feature/account` | BUILT | Accounts, balances, transactions, filters. |
 | `feature/statement` | BUILT | `PdfStatementRenderer` (PDFBox), `StatementService`. |
 | `feature/user` | BUILT | `User` entity + repository (shared, no controller of its own). |
 | `common/` | BUILT | `PageResponse`, `ValidationErrorResponse`, `GlobalExceptionHandler`. |
 | `config/` | BUILT | `OpenApiConfig` — springdoc, Swagger UI at `/swagger-ui.html`. |
 | `security/` | BUILT | `Role`, `AccountStatus`, `AccountStatusPolicy`, `CurrentUserProvider`, `SecurityConfig`, `jwt/`. |
-| `feature/admin` | BUILT (partial) | Staff-facing customer APIs: `GET /admin/customers`, `/{id}`, `/{id}/accounts` (US-054, US-049) and `PATCH /{id}/status` (US-048), class-level `@PreAuthorize("hasRole('ADMIN')")`. US-047's staff/role endpoints, US-046's password change and US-053's KPIs are still PLANNED. |
+| `feature/admin` | BUILT (partial) | Staff-facing customer APIs: `GET /admin/customers`, `/{id}`, `/{id}/accounts` (US-054, US-049) and `PATCH /{id}/status` (US-048), class-level `@PreAuthorize("hasAnyRole('ADMIN', 'TELLER')")` (customers and KYC review are open to TELLER; KPIs, transfers, bill providers, audit logs and staff are ADMIN only). US-047's staff/role endpoints, US-046's password change and US-053's KPIs are still PLANNED. |
 | `feature/transfer` | PLANNED | Sprint 4 (US-025 – US-035). Needs a `transfers` table + `transactions.transfer_id` as a prerequisite — see **H1**. |
 | `feature/beneficiary` | PLANNED | Sprint 4 backend, Sprint 5 mobile (US-029 – US-031). |
 | `feature/billpayment` | PLANNED | Sprint 5 (US-038 – US-042). |
@@ -101,7 +101,7 @@ erDiagram
         date date_of_birth "nullable since V2"
         varchar gender "nullable since V2"
         varchar phone UK "NOT NULL — 2FA destination"
-        varchar role "scalar: CUSTOMER | ADMIN"
+        varchar role "scalar: CUSTOMER | ADMIN | TELLER"
         varchar status "ACTIVE | SUSPENDED | LOCKED"
         boolean phone_verified
     }
@@ -169,7 +169,7 @@ sequenceDiagram
     A->>DB: find user, verify bcrypt hash
     A->>A: AccountStatusPolicy.checkLoginAllowed(status)
     A->>O: issue OTP (hashed, stored in otp_codes)
-    O-->>O: LoggingSmsSender → backend log (dev stub)
+    O-->>O: DevSmsSender → log, /dev/sms, Mailpit (dev stub)
     A-->>C: 200 { challengeToken }  ← no access token
 
     C->>A: POST /auth/2fa/verify (challengeToken + code)
@@ -192,8 +192,9 @@ instead of a 400).
 within one access-token lifetime (≤15 min) rather than surviving the 7-day refresh window. That is a
 better property than most designs at this stage get, and it is worth not regressing.
 
-**OTP delivery is a stub by design.** `OtpSender` is a one-method interface; `LoggingSmsSender`
-(`@Profile("dev")`) writes the code to the backend log. US-060 swaps in a real provider behind the
+**OTP delivery is a stub by design.** `OtpSender` is a one-method interface; `DevSmsSender`
+(`@Profile("dev")`) writes the code to the backend log, keeps the last 50 messages in memory for the
+dev-only `/dev/sms` page, and mirrors each one to Mailpit. US-060 swaps in a real provider behind the
 same interface. Codes are stored hashed with an `expires_at` and a `consumed_at` single-use marker.
 
 ## A.6 Client session handling — BUILT

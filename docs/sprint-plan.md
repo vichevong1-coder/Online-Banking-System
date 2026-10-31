@@ -117,15 +117,15 @@ There is no self-registration for staff/admin accounts, and the real admin-provi
 
 ### OTP & SMS delivery
 
-Registration and login OTPs go out over **SMS to the phone number on file** — email is never the delivery channel, for either customers or admin (see US-010's note: admin's email is a sign-in identifier, not an OTP destination). There is no real SMS provider wired up yet for local dev, so delivery is a **logging stub**: the code is written to the backend log (and can be surfaced in a dev-only response/console for demoing) rather than sent to a real handset.
+Registration and login OTPs go out over **SMS to the phone number on file** — email is never the delivery channel, for either customers or admin (see US-010's note: admin's email is a sign-in identifier, not an OTP destination). There is no real SMS provider wired up yet for local dev, so delivery is a **dev stub**: the code is written to the backend log, shown on a dev-only inbox page (`/dev/sms`), and copied to Mailpit as an email, rather than sent to a real handset.
 
 ```java
 public interface OtpSender { void send(String phoneNumber, String code); }
 
-@Component @Profile("dev") class LoggingSmsSender implements OtpSender { /* phone: log only, no real provider yet */ }
+@Component @Profile("dev") class DevSmsSender implements OtpSender { /* log + /dev/sms outbox + Mailpit copy, no real provider */ }
 ```
 
-US-060 in Sprint 6 swaps `LoggingSmsSender` for a live SMS provider (e.g. Twilio) behind the same `OtpSender` interface — same swap shape as previously planned, just SMS instead of email. Email/SMTP + Mailpit is retained solely for US-020 (statement email), which is unrelated to OTP.
+US-060 in Sprint 6 swaps `DevSmsSender` for a live SMS provider (e.g. Twilio) behind the same `OtpSender` interface — same swap shape as previously planned, just SMS instead of email. Email/SMTP + Mailpit is retained solely for US-020 (statement email), which is unrelated to OTP.
 
 ### Deliverable
 Authentication & Onboarding Module — register → OTP verify → customer login → 2FA → admin login with enforced 2FA.
@@ -377,7 +377,7 @@ Each needs a limit, a lockout policy that agrees with US-006's `LOCKED` status, 
 Items 1 and 2 are one afternoon's work done together and two separate reworks done apart.
 
 ### US-060 is a swap, not a build
-`LoggingSmsSender` already exists from Sprint 1 behind the `OtpSender` interface. This story replaces the logging stub with a live SMS provider — roughly an hour, not a sprint's worth of work.
+A dev SMS stub (originally `LoggingSmsSender`, now `DevSmsSender`) already exists from Sprint 1 behind the `OtpSender` interface. This story replaces the stub with a live SMS provider — roughly an hour, not a sprint's worth of work.
 
 ### Additional Activities
 - System Integration Testing (SIT) — note that unit tests are written per-story throughout; Sprint 6 is *integration* testing, not "the sprint where testing happens." `backend-ci.yml` and `mobile-ci.yml` already run tests on every PR.
