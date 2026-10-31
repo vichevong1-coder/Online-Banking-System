@@ -1,10 +1,17 @@
 import { Navigate, Outlet } from "react-router"
 import { Loader2 } from "lucide-react"
 
+import type { Role } from "@/features/admin/api"
 import { useAuth } from "@/features/auth/auth-context"
+import { homeFor } from "@/features/auth/permissions"
 
-export function ProtectedRoute() {
-  const { status } = useAuth()
+type ProtectedRouteProps = {
+  /** When set, signed-in users without one of these roles are sent to their own home page. */
+  allowedRoles?: Role[]
+}
+
+export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps = {}) {
+  const { status, user } = useAuth()
 
   if (status === "restoring") {
     return (
@@ -20,6 +27,10 @@ export function ProtectedRoute() {
 
   if (status === "awaiting-2fa") {
     return <Navigate to="/verify-2fa" replace />
+  }
+
+  if (allowedRoles && (!user || !allowedRoles.includes(user.role))) {
+    return <Navigate to={homeFor(user?.role)} replace />
   }
 
   return <Outlet />

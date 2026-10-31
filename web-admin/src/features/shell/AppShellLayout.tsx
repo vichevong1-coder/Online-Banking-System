@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Landmark,
   LogOut,
+  IdCard,
   Receipt,
   Settings,
   ShieldCheck,
@@ -34,11 +35,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/features/auth/auth-context"
+import { canAccess } from "@/features/auth/permissions"
 
-const NAV_ITEMS = [
+const ALL_NAV_ITEMS = [
   { to: "/", label: "Overview", icon: LayoutDashboard },
   { to: "/customers", label: "Customers", icon: Users },
+  { to: "/kyc", label: "KYC Review", icon: IdCard },
   { to: "/transfers", label: "Transfers", icon: ArrowLeftRight },
   { to: "/bill-providers", label: "Bill Providers", icon: Receipt },
   { to: "/roles", label: "Roles & Staff", icon: ShieldCheck },
@@ -47,9 +51,12 @@ const NAV_ITEMS = [
 ]
 
 export function AppShellLayout() {
-  const { email, signOut } = useAuth()
+  const { email, user, signOut } = useAuth()
   const { pathname } = useLocation()
-  const activeItem = NAV_ITEMS.find((item) => item.to === pathname)
+  const role = user?.role
+  // Only list pages the signed-in role may open (same map the route guards use).
+  const navItems = ALL_NAV_ITEMS.filter((item) => canAccess(role, item.to))
+  const activeItem = navItems.find((item) => item.to === pathname)
 
   return (
     <SidebarProvider>
@@ -64,7 +71,7 @@ export function AppShellLayout() {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {NAV_ITEMS.map((item) => (
+                {navItems.map((item) => (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton asChild isActive={pathname === item.to}>
                       <Link to={item.to}>
@@ -86,16 +93,25 @@ export function AppShellLayout() {
                   <AvatarFallback>{email ? email.slice(0, 2).toUpperCase() : "AD"}</AvatarFallback>
                 </Avatar>
                 <span className="truncate">{email ?? "Admin"}</span>
+                {role && (
+                  <Badge variant={role === "ADMIN" ? "default" : "secondary"} className="ml-auto">
+                    {role}
+                  </Badge>
+                )}
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-56">
-              <DropdownMenuItem asChild>
-                <Link to="/settings" className="flex items-center gap-2">
-                  <Settings className="size-4" />
-                  Settings
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {canAccess(role, "/settings") && (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="flex items-center gap-2">
+                      <Settings className="size-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem onSelect={signOut}>
                 <LogOut className="size-4" />
                 Sign out

@@ -59,6 +59,35 @@ export async function authFetch<T>(
   accessToken: string,
   options: RequestInit = {},
 ): Promise<T> {
+  const response = await authRequest(path, accessToken, options)
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    throw new ApiError(response.status, payload?.error ?? "UNKNOWN_ERROR")
+  }
+
+  if (response.status === 204) {
+    return undefined as T
+  }
+
+  return response.json() as Promise<T>
+}
+
+/** Same auth and refresh behaviour as authFetch, for binary responses such as KYC document images. */
+export async function authFetchBlob(path: string, accessToken: string): Promise<Blob> {
+  const response = await authRequest(path, accessToken)
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    throw new ApiError(response.status, payload?.error ?? "UNKNOWN_ERROR")
+  }
+  return response.blob()
+}
+
+async function authRequest(
+  path: string,
+  accessToken: string,
+  options: RequestInit = {},
+): Promise<Response> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${accessToken}`,
     ...(options.headers as Record<string, string>),
@@ -89,14 +118,5 @@ export async function authFetch<T>(
     }
   }
 
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null)
-    throw new ApiError(response.status, payload?.error ?? "UNKNOWN_ERROR")
-  }
-
-  if (response.status === 204) {
-    return undefined as T
-  }
-
-  return response.json() as Promise<T>
+  return response
 }
