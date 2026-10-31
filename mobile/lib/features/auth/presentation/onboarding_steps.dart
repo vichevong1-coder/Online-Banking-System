@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 
-/// Registration is three screens — phone (1), KYC details (2), OTP verify (3).
-/// Every one of them shows this so the customer knows how much is left.
+/// Registration is five screens — phone (1), scan ID (2), check details (3),
+/// selfie (4), OTP verify (5). Every one of them shows this so the customer
+/// knows how much is left.
 class OnboardingSteps extends StatelessWidget {
   const OnboardingSteps({
     super.key,
     required this.currentStep,
-    this.totalSteps = 3,
+    this.totalSteps = 5,
   });
 
   final int currentStep;

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile/core/theme/app_theme.dart';
-import 'package:mobile/features/auth/presentation/confirm_details_screen.dart';
+import 'package:mobile/features/auth/data/registration_draft.dart';
+import 'package:mobile/features/auth/presentation/nid_scan_screen.dart';
 import 'package:mobile/features/auth/presentation/onboarding_steps.dart';
 
 /// Step 1 of registration: the phone number every later step hangs off — it is
@@ -52,8 +53,9 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            ConfirmDetailsScreen(phone: '$_countryCode$_localDigits'),
+        builder: (_) => NidScanScreen(
+          draft: RegistrationDraft(phone: '$_countryCode$_localDigits'),
+        ),
       ),
     );
   }

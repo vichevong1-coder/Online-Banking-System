@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/features/auth/data/auth_models.dart';
 
@@ -9,10 +11,34 @@ class AuthApi {
   Future<void> register(RegisterRequest request) =>
       _client.post('/auth/register', request.toJson());
 
-  Future<void> verifyRegistrationOtp({
+  /// Returns the short-lived token that authorizes the KYC image uploads, or
+  /// null when the account is not awaiting approval.
+  Future<String?> verifyRegistrationOtp({
     required String phone,
     required String code,
-  }) => _client.post('/auth/otp/verify', {'phone': phone, 'code': code});
+  }) async {
+    final json = await _client.post('/auth/otp/verify', {
+      'phone': phone,
+      'code': code,
+    });
+    return json?['kycUploadToken'] as String?;
+  }
+
+  /// Uploads one KYC image. [type] is the backend's `KycDocumentType` name.
+  /// Returns the types the backend still lacks.
+  Future<List<String>> uploadKycDocument({
+    required String uploadToken,
+    required KycDocumentType type,
+    required Uint8List bytes,
+  }) async {
+    final json = await ApiClient(accessToken: uploadToken).postFile(
+      '/auth/kyc/documents/${type.apiName}',
+      bytes: bytes,
+      filename: '${type.apiName.toLowerCase()}.jpg',
+    );
+    final missing = json?['missing'] as List<dynamic>? ?? const [];
+    return missing.map((e) => e.toString()).toList();
+  }
 
   Future<void> resendRegistrationOtp({required String phone}) =>
       _client.post('/auth/otp/resend', {'phone': phone});

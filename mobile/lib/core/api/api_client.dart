@@ -284,6 +284,46 @@ class ApiClient {
     throw _toApiException(response);
   }
 
+  /// Uploads one file as multipart form data under the field `file`. The
+  /// bearer token comes from [accessToken], so callers holding a scoped token
+  /// (such as the signup KYC upload token) pass it to the constructor. No
+  /// refresh is attempted: those tokens cannot be refreshed.
+  Future<Map<String, dynamic>?> postFile(
+    String path, {
+    required Uint8List bytes,
+    required String filename,
+    String field = 'file',
+  }) async {
+    final request = http.MultipartRequest('POST', _uri(path, null));
+    final token = effectiveToken;
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    request.files.add(
+      http.MultipartFile.fromBytes(field, bytes, filename: filename),
+    );
+
+    http.Response response;
+    try {
+      response = await http.Response.fromStream(await _client.send(request));
+    } catch (_) {
+      throw ApiException(
+        0,
+        'NETWORK_ERROR',
+        "Couldn't reach the server. Please try again.",
+      );
+    }
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) {
+        return null;
+      }
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw _toApiException(response);
+  }
+
   ApiException _toApiException(http.Response response) {
     Map<String, dynamic>? decoded;
     try {

@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/core/theme/app_theme.dart';
-import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/auth_models.dart';
+import 'package:mobile/features/auth/data/registration_draft.dart';
 import 'package:mobile/features/auth/presentation/onboarding_steps.dart';
-import 'package:mobile/features/auth/presentation/otp_verification_screen.dart';
+import 'package:mobile/features/auth/presentation/selfie_screen.dart';
 
-/// Step 2 of registration — US-007's KYC form. Fields match the sprint-plan
+/// Step 3 of registration — US-007's KYC form. Fields match the sprint-plan
 /// note exactly (first/last name, Cambodian NID, NID expiry, date of birth,
 /// gender) plus the password, with the phone carried in from step 1. No email:
 /// customers are never identified or contacted by email anywhere in this app.
 ///
-/// Nothing here is pre-filled. The customer types their own identity data — a
-/// KYC form that arrives with someone else's name in it is worse than useless.
+/// Whatever OCR read off the card in step 2 is prefilled, and every field stays
+/// editable. When OCR read nothing (or the customer skipped the camera path),
+/// this is the plain typed form.
 class ConfirmDetailsScreen extends StatefulWidget {
-  final String phone;
+  final RegistrationDraft draft;
 
-  const ConfirmDetailsScreen({super.key, required this.phone});
+  const ConfirmDetailsScreen({super.key, required this.draft});
 
   @override
   State<ConfirmDetailsScreen> createState() => _ConfirmDetailsScreenState();
@@ -41,8 +41,33 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
 
   final Map<String, String> _serverFieldErrors = {};
   bool _obscurePassword = true;
-  bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    // Coming back from the selfie step keeps what the customer confirmed.
+    final confirmed = widget.draft.details;
+    if (confirmed != null) {
+      _firstNameController.text = confirmed.firstName;
+      _lastNameController.text = confirmed.lastName;
+      _nidController.text = confirmed.nidNumber;
+      _passwordController.text = confirmed.password;
+      _nidExpiryDate = confirmed.nidExpiryDate;
+      _dateOfBirth = confirmed.dateOfBirth;
+      _gender = confirmed.gender;
+      return;
+    }
+    final scanned = widget.draft.scanned;
+    if (scanned != null) {
+      _firstNameController.text = scanned.firstName ?? '';
+      _lastNameController.text = scanned.lastName ?? '';
+      _nidController.text = scanned.nidNumber ?? '';
+      _nidExpiryDate = scanned.nidExpiryDate;
+      _dateOfBirth = scanned.dateOfBirth;
+      _gender = scanned.gender;
+    }
+  }
 
   @override
   void dispose() {
@@ -102,7 +127,7 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
     });
   }
 
-  Future<void> _submitRegistration() async {
+  void _continue() {
     setState(() => _errorMessage = null);
     final isValid = _formKey.currentState!.validate();
 
@@ -117,52 +142,22 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
     }
     if (!isValid) return;
 
-    setState(() => _isLoading = true);
-
-    try {
-      final request = RegisterRequest(
-        firstName: _firstNameController.text.trim(),
-        lastName: _lastNameController.text.trim(),
-        password: _passwordController.text,
-        nidNumber: _nidController.text.trim(),
-        nidExpiryDate: _nidExpiryDate!,
-        dateOfBirth: _dateOfBirth!,
-        gender: _gender!,
-        phone: widget.phone,
-      );
-
-      await AuthApi().register(request);
-
-      if (!mounted) return;
-      // pushReplacement, not push: going "back" from the OTP screen would land
-      // on a filled form whose submit would re-POST /auth/register.
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OtpVerificationScreen(phone: widget.phone),
-        ),
-      );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        if (e.fieldErrors != null && e.fieldErrors!.isNotEmpty) {
-          _serverFieldErrors
-            ..clear()
-            ..addAll(e.fieldErrors!);
-          _formKey.currentState!.validate();
-        } else {
-          _errorMessage = e.message;
-        }
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(
-        () =>
-            _errorMessage = "Couldn't complete registration. Please try again.",
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+    // Nothing is sent yet: registration happens after the selfie, so the
+    // account is only created once everything has been collected.
+    widget.draft.details = RegisterRequest(
+      firstName: _firstNameController.text.trim(),
+      lastName: _lastNameController.text.trim(),
+      password: _passwordController.text,
+      nidNumber: _nidController.text.trim(),
+      nidExpiryDate: _nidExpiryDate!,
+      dateOfBirth: _dateOfBirth!,
+      gender: _gender!,
+      phone: widget.draft.phone,
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => SelfieScreen(draft: widget.draft)),
+    );
   }
 
   Widget _buildField({
@@ -325,10 +320,10 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const OnboardingSteps(currentStep: 2),
+                const OnboardingSteps(currentStep: 3),
                 const SizedBox(height: 28),
                 const Text(
-                  'Tell us who you are',
+                  'Check your details',
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
@@ -337,7 +332,13 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'These details come straight off your Cambodian national ID card, and set the password for ${widget.phone}.',
+                  widget.draft.scanned == null
+                      ? "We couldn't read your card, so please type the details "
+                            'as printed on it. They also set the password for '
+                            '${widget.draft.phone}.'
+                      : 'We filled these in from your card. Correct anything '
+                            'that is wrong, then choose a password for '
+                            '${widget.draft.phone}.',
                   style: const TextStyle(
                     fontSize: 13,
                     color: Colors.white70,
@@ -568,8 +569,7 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                     Expanded(
                       child: PrimaryActionButton(
                         title: 'CONTINUE',
-                        isLoading: _isLoading,
-                        onPressed: _submitRegistration,
+                        onPressed: _continue,
                       ),
                     ),
                   ],

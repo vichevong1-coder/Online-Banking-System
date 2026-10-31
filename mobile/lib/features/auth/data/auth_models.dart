@@ -47,6 +47,17 @@ class RegisterRequest {
   };
 }
 
+// Backend: com.obs.backend.feature.kyc.entity.KycDocumentType.
+enum KycDocumentType {
+  nidFront('NID_FRONT'),
+  nidBack('NID_BACK'),
+  selfie('SELFIE');
+
+  const KycDocumentType(this.apiName);
+
+  final String apiName;
+}
+
 // Backend: com.obs.backend.feature.auth.dto.LoginResponse (US-009).
 class LoginResponse {
   LoginResponse({required this.challengeToken});

@@ -3,16 +3,24 @@ import 'package:flutter/material.dart';
 import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
+import 'package:mobile/features/auth/data/auth_models.dart';
+import 'package:mobile/features/auth/data/registration_draft.dart';
 import 'package:mobile/features/auth/presentation/login_screen.dart';
 import 'package:mobile/features/auth/presentation/onboarding_steps.dart';
 import 'package:mobile/features/auth/presentation/otp_code_input.dart';
+import 'package:mobile/features/auth/presentation/pending_approval_screen.dart';
 
-/// Step 3 of registration: the SMS code from US-008. The backend delivers it
+/// Step 5 of registration: the SMS code from US-008. The backend delivers it
 /// through the `OtpSender` stub, so in local dev it is printed to the log.
+/// Verifying returns a short-lived token; the ID and selfie photos are
+/// uploaded with it, then the customer waits for an officer's approval.
 class OtpVerificationScreen extends StatefulWidget {
-  final String phone;
+  final RegistrationDraft draft;
 
-  const OtpVerificationScreen({super.key, required this.phone});
+  /// Injected by tests; the real API is used otherwise.
+  final AuthApi? authApi;
+
+  const OtpVerificationScreen({super.key, required this.draft, this.authApi});
 
   @override
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
@@ -20,6 +28,13 @@ class OtpVerificationScreen extends StatefulWidget {
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final GlobalKey<OtpCodeInputState> _codeKey = GlobalKey<OtpCodeInputState>();
+  late final AuthApi _api = widget.authApi ?? AuthApi();
+
+  String get _phone => widget.draft.phone;
+
+  /// Set once the code is verified. The code is single-use, so if an upload
+  /// fails the customer retries with this token instead of a new code.
+  String? _uploadToken;
 
   String _code = '';
   bool _isLoading = false;
@@ -58,16 +73,36 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   /// Shown next to "code sent to" — the raw +855… is hard to read back.
   String get _formattedPhone {
-    final digits = widget.phone.replaceAll(RegExp(r'[^0-9]'), '');
-    if (!widget.phone.startsWith('+855') || digits.length < 11) {
-      return widget.phone;
+    final digits = _phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (!_phone.startsWith('+855') || digits.length < 11) {
+      return _phone;
     }
     final local = digits.substring(3);
     return '+855 ${local.substring(0, 2)} ${local.substring(2, 5)} ${local.substring(5)}';
   }
 
+  Future<void> _uploadAll(String token) async {
+    final draft = widget.draft;
+    final images = {
+      KycDocumentType.nidFront: draft.nidFront,
+      KycDocumentType.nidBack: draft.nidBack,
+      KycDocumentType.selfie: draft.selfie,
+    };
+    for (final entry in images.entries) {
+      final image = entry.value;
+      if (image == null) continue;
+      await _api.uploadKycDocument(
+        uploadToken: token,
+        type: entry.key,
+        bytes: image.bytes,
+      );
+    }
+  }
+
   Future<void> _verifyOtp() async {
-    if (_code.length != 6) {
+    // After a failed upload the code is already used; just retry the upload.
+    final existingToken = _uploadToken;
+    if (existingToken == null && _code.length != 6) {
       setState(() => _errorMessage = 'Please enter the 6-digit code');
       return;
     }
@@ -78,28 +113,48 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
 
     try {
-      await AuthApi().verifyRegistrationOtp(phone: widget.phone, code: _code);
+      var token = existingToken;
+      if (token == null) {
+        token = await _api.verifyRegistrationOtp(phone: _phone, code: _code);
+        if (token == null) {
+          // Not awaiting approval (for example already approved): nothing to upload.
+          if (!mounted) return;
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+          return;
+        }
+        _uploadToken = token;
+      }
+
+      await _uploadAll(token);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registration verified successfully! Please sign in.'),
-          backgroundColor: AppTheme.primaryEmerald,
-        ),
-      );
-
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const PendingApprovalScreen()),
         (route) => false,
       );
     } on ApiException catch (e) {
+      if (_uploadToken != null) {
+        // The code was accepted; only the photo upload failed.
+        setState(() => _errorMessage = e.message);
+        return;
+      }
       _codeKey.currentState?.clear();
       setState(() {
         _code = '';
         _errorMessage = e.message;
       });
     } catch (_) {
+      if (_uploadToken != null) {
+        setState(
+          () => _errorMessage = "Couldn't upload your photos. Please retry.",
+        );
+        return;
+      }
       _codeKey.currentState?.clear();
       setState(() {
         _code = '';
@@ -111,7 +166,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> _resendOtp() async {
-    if (_countdown > 0) return;
+    if (_countdown > 0 || _uploadToken != null) return;
 
     setState(() {
       _isResending = true;
@@ -119,7 +174,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
 
     try {
-      await AuthApi().resendRegistrationOtp(phone: widget.phone);
+      await _api.resendRegistrationOtp(phone: _phone);
       _codeKey.currentState?.clear();
       _startTimer();
       if (!mounted) return;
@@ -161,7 +216,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const OnboardingSteps(currentStep: 3),
+              const OnboardingSteps(currentStep: 5),
               const SizedBox(height: 32),
               const Text(
                 'Enter your code',
@@ -278,9 +333,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               ),
               const SizedBox(height: 36),
               PrimaryActionButton(
-                title: 'VERIFY',
+                title: _uploadToken == null ? 'VERIFY' : 'RETRY UPLOAD',
                 isLoading: _isLoading,
-                onPressed: _code.length == 6 ? _verifyOtp : null,
+                onPressed: (_code.length == 6 || _uploadToken != null)
+                    ? _verifyOtp
+                    : null,
               ),
               const SizedBox(height: 24),
             ],
