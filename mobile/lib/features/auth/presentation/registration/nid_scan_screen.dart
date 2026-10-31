@@ -3,8 +3,8 @@ import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/kyc_capture.dart';
 import 'package:mobile/features/auth/data/nid_parser.dart';
 import 'package:mobile/features/auth/data/registration_draft.dart';
-import 'package:mobile/features/auth/presentation/confirm_details_screen.dart';
-import 'package:mobile/features/auth/presentation/onboarding_steps.dart';
+import 'package:mobile/features/auth/presentation/registration/confirm_details_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/onboarding_steps.dart';
 
 /// Step 2 of registration: photograph both sides of the national ID card.
 /// ML Kit reads the text on the phone to prefill the next step; the photos stay

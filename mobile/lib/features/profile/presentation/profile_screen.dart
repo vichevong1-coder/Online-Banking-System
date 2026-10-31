@@ -3,7 +3,7 @@ import 'package:mobile/core/session/session_manager.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/auth_models.dart';
-import 'package:mobile/features/auth/presentation/welcome_screen.dart';
+import 'package:mobile/features/auth/presentation/login/welcome_screen.dart';
 import 'package:mobile/core/widgets/app_state_view.dart';
 
 class ProfileScreen extends StatefulWidget {

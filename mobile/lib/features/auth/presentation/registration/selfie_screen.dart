@@ -4,8 +4,8 @@ import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/kyc_capture.dart';
 import 'package:mobile/features/auth/data/registration_draft.dart';
-import 'package:mobile/features/auth/presentation/onboarding_steps.dart';
-import 'package:mobile/features/auth/presentation/otp_verification_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/onboarding_steps.dart';
+import 'package:mobile/features/auth/presentation/registration/otp_verification_screen.dart';
 
 /// Step 4 of registration: a selfie for the officer to compare with the ID
 /// photo. Continuing creates the account (`/auth/register`) and sends the SMS

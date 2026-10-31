@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
-import 'package:mobile/features/auth/presentation/reset_password_screen.dart';
+import 'package:mobile/features/auth/presentation/password_reset/reset_password_screen.dart';
 import 'package:mobile/core/widgets/bank_input_field.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {

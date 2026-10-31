@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/core/theme/app_theme.dart';
-import 'package:mobile/features/auth/presentation/login_screen.dart';
+import 'package:mobile/features/auth/presentation/login/login_screen.dart';
 
 /// Shown once the ID and selfie are uploaded. The account cannot sign in until
 /// a bank officer approves it, so this is the end of the signup flow.

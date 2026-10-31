@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/core/api/api_client.dart';
-import 'package:mobile/features/auth/presentation/login_screen.dart';
+import 'package:mobile/features/auth/presentation/login/login_screen.dart';
 
 void main() {
   test('a pending account is told its application is under review', () {

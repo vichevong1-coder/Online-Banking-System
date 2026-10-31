@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/auth/data/kyc_capture.dart';
 import 'package:mobile/features/auth/data/registration_draft.dart';
-import 'package:mobile/features/auth/presentation/confirm_details_screen.dart';
-import 'package:mobile/features/auth/presentation/nid_scan_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/confirm_details_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/nid_scan_screen.dart';
 
 // A valid 1x1 PNG so Image.memory can decode it.
 final Uint8List _png = base64Decode(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/core/theme/app_theme.dart';
-import 'package:mobile/features/auth/presentation/login_screen.dart';
-import 'package:mobile/features/auth/presentation/phone_entry_screen.dart';
+import 'package:mobile/features/auth/presentation/login/login_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/phone_entry_screen.dart';
 
 class WelcomeLandingScreen extends StatelessWidget {
   const WelcomeLandingScreen({super.key});

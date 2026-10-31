@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
-import 'package:mobile/features/auth/presentation/forgot_password_screen.dart';
-import 'package:mobile/features/auth/presentation/phone_entry_screen.dart';
-import 'package:mobile/features/auth/presentation/two_factor_screen.dart';
+import 'package:mobile/features/auth/presentation/password_reset/forgot_password_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/phone_entry_screen.dart';
+import 'package:mobile/features/auth/presentation/login/two_factor_screen.dart';
 import 'package:mobile/core/widgets/bank_input_field.dart';
 
 /// Strips non-digits, strips leading Cambodian trunk '0' or country code '855',

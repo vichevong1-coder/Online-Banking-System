@@ -5,10 +5,10 @@ import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/auth_models.dart';
 import 'package:mobile/features/auth/data/registration_draft.dart';
-import 'package:mobile/features/auth/presentation/login_screen.dart';
-import 'package:mobile/features/auth/presentation/onboarding_steps.dart';
+import 'package:mobile/features/auth/presentation/login/login_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/onboarding_steps.dart';
 import 'package:mobile/features/auth/presentation/otp_code_input.dart';
-import 'package:mobile/features/auth/presentation/pending_approval_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/pending_approval_screen.dart';
 
 /// Step 5 of registration: the SMS code from US-008. The backend delivers it
 /// through the `OtpSender` stub, so in local dev it is printed to the log.

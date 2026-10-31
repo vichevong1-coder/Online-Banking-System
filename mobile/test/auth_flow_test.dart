@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/core/theme/app_theme.dart';
-import 'package:mobile/features/auth/presentation/login_screen.dart';
-import 'package:mobile/features/auth/presentation/phone_entry_screen.dart';
-import 'package:mobile/features/auth/presentation/welcome_screen.dart';
+import 'package:mobile/features/auth/presentation/login/login_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/phone_entry_screen.dart';
+import 'package:mobile/features/auth/presentation/login/welcome_screen.dart';
 
 void main() {
   testWidgets('WelcomeLandingScreen renders with CTA buttons', (

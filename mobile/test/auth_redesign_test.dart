@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/core/session/session_manager.dart';
-import 'package:mobile/features/auth/presentation/login_screen.dart';
+import 'package:mobile/features/auth/presentation/login/login_screen.dart';
 import 'package:mobile/features/auth/presentation/otp_code_input.dart';
-import 'package:mobile/features/auth/presentation/two_factor_screen.dart';
+import 'package:mobile/features/auth/presentation/login/two_factor_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

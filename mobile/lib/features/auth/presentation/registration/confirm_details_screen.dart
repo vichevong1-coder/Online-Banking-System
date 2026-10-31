@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_models.dart';
 import 'package:mobile/features/auth/data/registration_draft.dart';
-import 'package:mobile/features/auth/presentation/onboarding_steps.dart';
-import 'package:mobile/features/auth/presentation/selfie_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/onboarding_steps.dart';
+import 'package:mobile/features/auth/presentation/registration/selfie_screen.dart';
 
 /// Step 3 of registration — US-007's KYC form. Fields match the sprint-plan
 /// note exactly (first/last name, Cambodian NID, NID expiry, date of birth,

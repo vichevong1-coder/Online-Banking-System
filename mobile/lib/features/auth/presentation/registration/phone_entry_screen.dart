@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/registration_draft.dart';
-import 'package:mobile/features/auth/presentation/nid_scan_screen.dart';
-import 'package:mobile/features/auth/presentation/onboarding_steps.dart';
+import 'package:mobile/features/auth/presentation/registration/nid_scan_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/onboarding_steps.dart';
 
 /// Step 1 of registration: the phone number every later step hangs off — it is
 /// the OTP destination (US-008) and the customer's sign-in identifier (US-009).

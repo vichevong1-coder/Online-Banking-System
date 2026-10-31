@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/auth/data/auth_models.dart';
 import 'package:mobile/features/auth/data/kyc_capture.dart';
 import 'package:mobile/features/auth/data/registration_draft.dart';
-import 'package:mobile/features/auth/presentation/login_screen.dart';
-import 'package:mobile/features/auth/presentation/otp_verification_screen.dart';
-import 'package:mobile/features/auth/presentation/pending_approval_screen.dart';
+import 'package:mobile/features/auth/presentation/login/login_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/otp_verification_screen.dart';
+import 'package:mobile/features/auth/presentation/registration/pending_approval_screen.dart';
 
 import 'support/kyc_fakes.dart';
 

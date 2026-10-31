@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/core/session/session_manager.dart';
 import 'package:mobile/core/theme/app_theme.dart';
-import 'package:mobile/features/auth/presentation/welcome_screen.dart';
+import 'package:mobile/features/auth/presentation/login/welcome_screen.dart';
 import 'package:mobile/features/dashboard/presentation/main_dashboard_screen.dart';
 
 class ObsApp extends StatelessWidget {
