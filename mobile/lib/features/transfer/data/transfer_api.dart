@@ -8,7 +8,9 @@ class TransferApi {
 
   /// US-025. The backend names this `POST /transfers` — there is no
   /// `/transfers/internal`.
-  Future<TransferResponse> internalTransfer(InternalTransferRequest request) async {
+  Future<TransferResponse> internalTransfer(
+    InternalTransferRequest request,
+  ) async {
     final json = await _client.post('/transfers', request.toJson());
     return TransferResponse.fromJson(json!);
   }
@@ -19,42 +21,56 @@ class TransferApi {
     return TransferResponse.fromJson(json!);
   }
 
-
-
   Future<TransferResponse> getTransfer(String id) async {
     final json = await _client.get('/transfers/$id');
     return TransferResponse.fromJson(json as Map<String, dynamic>);
   }
 
   /// US-028's history, newest first.
-  Future<List<TransferResponse>> listTransfers({int page = 0, int size = 20}) async {
-    final json = await _client.get('/transfers', query: {
-      'page': page.toString(),
-      'size': size.toString(),
-    });
+  Future<List<TransferResponse>> listTransfers({
+    int page = 0,
+    int size = 20,
+  }) async {
+    final json = await _client.get(
+      '/transfers',
+      query: {'page': page.toString(), 'size': size.toString()},
+    );
     final content = (json as Map<String, dynamic>)['content'] as List<dynamic>;
-    return content.map((e) => TransferResponse.fromJson(e as Map<String, dynamic>)).toList();
+    return content
+        .map((e) => TransferResponse.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// Paged on the backend, so the envelope has to be unwrapped.
-  Future<List<Beneficiary>> listBeneficiaries({int page = 0, int size = 50}) async {
-    final json = await _client.get('/beneficiaries', query: {
-      'page': page.toString(),
-      'size': size.toString(),
-    });
+  Future<List<Beneficiary>> listBeneficiaries({
+    int page = 0,
+    int size = 50,
+  }) async {
+    final json = await _client.get(
+      '/beneficiaries',
+      query: {'page': page.toString(), 'size': size.toString()},
+    );
     final content = (json as Map<String, dynamic>)['content'] as List<dynamic>;
-    return content.map((e) => Beneficiary.fromJson(e as Map<String, dynamic>)).toList();
+    return content
+        .map((e) => Beneficiary.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<Beneficiary> createBeneficiary(CreateBeneficiaryRequest request) async {
+  Future<Beneficiary> createBeneficiary(
+    CreateBeneficiaryRequest request,
+  ) async {
     final json = await _client.post('/beneficiaries', request.toJson());
     return Beneficiary.fromJson(json!);
   }
 
-  Future<Beneficiary> updateBeneficiary(String id, UpdateBeneficiaryRequest request) async {
+  Future<Beneficiary> updateBeneficiary(
+    String id,
+    UpdateBeneficiaryRequest request,
+  ) async {
     final json = await _client.patch('/beneficiaries/$id', request.toJson());
     return Beneficiary.fromJson(json!);
   }
 
-  Future<void> deleteBeneficiary(String id) => _client.delete('/beneficiaries/$id');
+  Future<void> deleteBeneficiary(String id) =>
+      _client.delete('/beneficiaries/$id');
 }

@@ -28,7 +28,10 @@ void main() {
     });
 
     test('trims surrounding whitespace from a scan', () {
-      expect(QrPayload.tryParse('  OBS1:P:900000000001 ')?.target, '900000000001');
+      expect(
+        QrPayload.tryParse('  OBS1:P:900000000001 ')?.target,
+        '900000000001',
+      );
     });
 
     test('rejects anything that is not an OBS1 payment code', () {

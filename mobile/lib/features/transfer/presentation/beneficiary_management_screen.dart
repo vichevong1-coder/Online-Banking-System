@@ -4,6 +4,7 @@ import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/transfer/data/transfer_api.dart';
 import 'package:mobile/features/transfer/data/transfer_models.dart';
+import 'package:mobile/core/widgets/app_state_view.dart';
 // import 'package:mobile/features/transfer/presentation/interbank_transfer_screen.dart';
 
 /// US-029/US-030/US-031. Called "favorites" everywhere the customer can see —
@@ -14,10 +15,12 @@ class BeneficiaryManagementScreen extends StatefulWidget {
   const BeneficiaryManagementScreen({super.key});
 
   @override
-  State<BeneficiaryManagementScreen> createState() => _BeneficiaryManagementScreenState();
+  State<BeneficiaryManagementScreen> createState() =>
+      _BeneficiaryManagementScreenState();
 }
 
-class _BeneficiaryManagementScreenState extends State<BeneficiaryManagementScreen> {
+class _BeneficiaryManagementScreenState
+    extends State<BeneficiaryManagementScreen> {
   List<Beneficiary> _beneficiaries = [];
   bool _loading = true;
   String? _error;
@@ -78,11 +81,16 @@ class _BeneficiaryManagementScreenState extends State<BeneficiaryManagementScree
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
-          backgroundColor: const Color(0xFF0A2B24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          backgroundColor: AppTheme.surfaceElevated,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
             existing == null ? 'Add favorite' : 'Edit favorite',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -90,7 +98,13 @@ class _BeneficiaryManagementScreenState extends State<BeneficiaryManagementScree
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (formError != null) ...[
-                  Text(formError!, style: const TextStyle(color: AppTheme.primaryRedLight, fontSize: 12)),
+                  Text(
+                    formError!,
+                    style: const TextStyle(
+                      color: AppTheme.primaryRedLight,
+                      fontSize: 12,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                 ],
                 TextField(
@@ -105,19 +119,28 @@ class _BeneficiaryManagementScreenState extends State<BeneficiaryManagementScree
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: bankCode,
-                  dropdownColor: const Color(0xFF0A2B24),
+                  dropdownColor: AppTheme.surfaceElevated,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(labelText: 'Bank'),
                   items: DestinationBank.all
-                      .map((b) => DropdownMenuItem(value: b.code, child: Text('${b.name} (${b.code})')))
+                      .map(
+                        (b) => DropdownMenuItem(
+                          value: b.code,
+                          child: Text('${b.name} (${b.code})'),
+                        ),
+                      )
                       .toList(),
-                  onChanged: (v) => setModalState(() => bankCode = v ?? DestinationBank.all.first.code),
+                  onChanged: (v) => setModalState(
+                    () => bankCode = v ?? DestinationBank.all.first.code,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: accCtrl,
                   maxLength: 34,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]'))],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                  ],
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
                     labelText: 'Account number',
@@ -131,10 +154,15 @@ class _BeneficiaryManagementScreenState extends State<BeneficiaryManagementScree
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white60),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryEmerald),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryEmerald,
+              ),
               onPressed: () async {
                 final name = nameCtrl.text.trim();
                 final acc = accCtrl.text.trim();
@@ -143,19 +171,30 @@ class _BeneficiaryManagementScreenState extends State<BeneficiaryManagementScree
                   return;
                 }
                 if (acc.length < 6) {
-                  setModalState(() => formError = 'Account number must be at least 6 characters');
+                  setModalState(
+                    () => formError =
+                        'Account number must be at least 6 characters',
+                  );
                   return;
                 }
                 Navigator.pop(ctx);
                 try {
                   if (existing == null) {
                     await TransferApi().createBeneficiary(
-                      CreateBeneficiaryRequest(displayName: name, bankCode: bankCode, accountNumber: acc),
+                      CreateBeneficiaryRequest(
+                        displayName: name,
+                        bankCode: bankCode,
+                        accountNumber: acc,
+                      ),
                     );
                   } else {
                     await TransferApi().updateBeneficiary(
                       existing.id,
-                      UpdateBeneficiaryRequest(displayName: name, bankCode: bankCode, accountNumber: acc),
+                      UpdateBeneficiaryRequest(
+                        displayName: name,
+                        bankCode: bankCode,
+                        accountNumber: acc,
+                      ),
                     );
                   }
                   await _fetchBeneficiaries();
@@ -167,7 +206,10 @@ class _BeneficiaryManagementScreenState extends State<BeneficiaryManagementScree
               },
               child: Text(
                 existing == null ? 'Save' : 'Update',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -184,7 +226,9 @@ class _BeneficiaryManagementScreenState extends State<BeneficiaryManagementScree
       );
       setState(() {
         _beneficiaries = _sorted(
-          _beneficiaries.map((item) => item.id == b.id ? updated : item).toList(),
+          _beneficiaries
+              .map((item) => item.id == b.id ? updated : item)
+              .toList(),
         );
       });
     } on ApiException catch (e) {
@@ -198,14 +242,24 @@ class _BeneficiaryManagementScreenState extends State<BeneficiaryManagementScree
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0A2B24),
-        title: const Text('Delete favorite', style: TextStyle(color: Colors.white)),
-        content: Text('Remove ${b.displayName} from your saved favorites?',
-            style: const TextStyle(color: Colors.white70)),
+        backgroundColor: AppTheme.surfaceElevated,
+        title: const Text(
+          'Delete favorite',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Remove ${b.displayName} from your saved favorites?',
+          style: const TextStyle(color: Colors.white70),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryRed),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryRed,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),
           ),
@@ -232,130 +286,179 @@ class _BeneficiaryManagementScreenState extends State<BeneficiaryManagementScree
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Manage Favorites', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text(
+          'Manage Favorites',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: AppTheme.emeraldLight),
+            icon: const Icon(
+              Icons.add_circle_outline,
+              color: AppTheme.emeraldLight,
+            ),
             onPressed: () => _showBeneficiaryForm(),
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.emeraldLight))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.emeraldLight),
+            )
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_error!, style: const TextStyle(color: AppTheme.primaryRedLight)),
-                      const SizedBox(height: 12),
-                      ElevatedButton(onPressed: _fetchBeneficiaries, child: const Text('Retry')),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _fetchBeneficiaries,
-                  color: AppTheme.emeraldLight,
-                  child: _beneficiaries.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.people_outline, size: 64, color: Colors.white.withValues(alpha: 0.3)),
-                              const SizedBox(height: 16),
-                              const Text('No saved favorites',
-                                  style: TextStyle(color: Colors.white70, fontSize: 16)),
-                              const SizedBox(height: 12),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryEmerald),
-                                icon: const Icon(Icons.add, color: Colors.white),
-                                label: const Text('Add Favorite', style: TextStyle(color: Colors.white)),
-                                onPressed: () => _showBeneficiaryForm(),
-                              ),
-                            ],
+          ? AppErrorView(message: _error!, onRetry: _fetchBeneficiaries)
+          : RefreshIndicator(
+              onRefresh: _fetchBeneficiaries,
+              color: AppTheme.emeraldLight,
+              child: _beneficiaries.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 64,
+                            color: Colors.white.withValues(alpha: 0.3),
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _beneficiaries.length,
-                          itemBuilder: (ctx, idx) {
-                            final b = _beneficiaries[idx];
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: GlassCard(
-                                padding: const EdgeInsets.all(14),
-                                borderRadius: 14,
-                                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Interbank transfers disabled for this demo')),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No saved favorites',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryEmerald,
+                            ),
+                            icon: const Icon(Icons.add, color: Colors.white),
+                            label: const Text(
+                              'Add Favorite',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            onPressed: () => _showBeneficiaryForm(),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _beneficiaries.length,
+                      itemBuilder: (ctx, idx) {
+                        final b = _beneficiaries[idx];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: GlassCard(
+                            padding: const EdgeInsets.all(14),
+                            borderRadius: 14,
+                            onTap: () =>
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Interbank transfers disabled for this demo',
+                                    ),
+                                  ),
                                 ),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      backgroundColor: const Color(0x3300FFB2),
-                                      child: Text(
-                                        b.displayName.isNotEmpty ? b.displayName[0].toUpperCase() : 'B',
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: const Color(0x3300FFB2),
+                                  child: Text(
+                                    b.displayName.isNotEmpty
+                                        ? b.displayName[0].toUpperCase()
+                                        : 'B',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.emeraldLight,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        b.displayName,
                                         style: const TextStyle(
-                                            fontWeight: FontWeight.bold, color: AppTheme.emeraldLight),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            b.displayName,
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '${DestinationBank.nameFor(b.bankCode)} • ${b.accountNumber}',
-                                            style: const TextStyle(fontSize: 12, color: Colors.white60),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    IconButton(
-                                      tooltip: b.favorite ? 'Remove from favorites' : 'Add to favorites',
-                                      icon: Icon(
-                                        b.favorite ? Icons.star : Icons.star_border,
-                                        color: b.favorite ? const Color(0xFFFFC107) : Colors.white60,
-                                        size: 20,
-                                      ),
-                                      onPressed: () => _toggleFavorite(b),
-                                    ),
-                                    PopupMenuButton<String>(
-                                      icon: const Icon(Icons.more_vert, color: Colors.white60, size: 20),
-                                      color: const Color(0xFF0A2B24),
-                                      onSelected: (value) {
-                                        if (value == 'edit') {
-                                          _showBeneficiaryForm(existing: b);
-                                        } else if (value == 'delete') {
-                                          _deleteBeneficiary(b);
-                                        }
-                                      },
-                                      itemBuilder: (ctx) => const [
-                                        PopupMenuItem(
-                                          value: 'edit',
-                                          child: Text('Edit', style: TextStyle(color: Colors.white)),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Colors.white,
                                         ),
-                                        PopupMenuItem(
-                                          value: 'delete',
-                                          child: Text('Delete', style: TextStyle(color: AppTheme.primaryRedLight)),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${DestinationBank.nameFor(b.bankCode)} • ${b.accountNumber}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white60,
                                         ),
-                                      ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: b.favorite
+                                      ? 'Remove from favorites'
+                                      : 'Add to favorites',
+                                  icon: Icon(
+                                    b.favorite ? Icons.star : Icons.star_border,
+                                    color: b.favorite
+                                        ? const Color(0xFFFFC107)
+                                        : Colors.white60,
+                                    size: 20,
+                                  ),
+                                  onPressed: () => _toggleFavorite(b),
+                                ),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(
+                                    Icons.more_vert,
+                                    color: Colors.white60,
+                                    size: 20,
+                                  ),
+                                  color: AppTheme.surfaceElevated,
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      _showBeneficiaryForm(existing: b);
+                                    } else if (value == 'delete') {
+                                      _deleteBeneficiary(b);
+                                    }
+                                  },
+                                  itemBuilder: (ctx) => const [
+                                    PopupMenuItem(
+                                      value: 'edit',
+                                      child: Text(
+                                        'Edit',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text(
+                                        'Delete',
+                                        style: TextStyle(
+                                          color: AppTheme.primaryRedLight,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
     );
   }
 }

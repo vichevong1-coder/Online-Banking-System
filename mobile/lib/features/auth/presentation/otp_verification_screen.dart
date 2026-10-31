@@ -143,10 +143,17 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Verify', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text(
+          'Verify',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -158,7 +165,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               const SizedBox(height: 32),
               const Text(
                 'Enter your code',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 10),
               Row(
@@ -166,7 +177,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   Expanded(
                     child: Text(
                       'Sent by SMS to $_formattedPhone',
-                      style: const TextStyle(fontSize: 13, color: Colors.white70, height: 1.5),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                        height: 1.5,
+                      ),
                     ),
                   ),
                   TextButton(
@@ -178,7 +193,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     onPressed: () => Navigator.pop(context),
                     child: const Text(
                       'Change',
-                      style: TextStyle(color: AppTheme.emeraldLight, fontSize: 13, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: AppTheme.emeraldLight,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -199,12 +218,19 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    const Icon(Icons.error_outline, color: AppTheme.primaryRedLight, size: 16),
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppTheme.primaryRedLight,
+                      size: 16,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(color: AppTheme.primaryRedLight, fontSize: 12),
+                        style: const TextStyle(
+                          color: AppTheme.primaryRedLight,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -217,18 +243,31 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     ? const SizedBox(
                         height: 16,
                         width: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.emeraldLight),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.emeraldLight,
+                        ),
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text("Didn't get it? ", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          const Text(
+                            "Didn't get it? ",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
                           GestureDetector(
                             onTap: _countdown > 0 ? null : _resendOtp,
                             child: Text(
-                              _countdown > 0 ? 'Resend in ${_countdown}s' : 'Resend code',
+                              _countdown > 0
+                                  ? 'Resend in ${_countdown}s'
+                                  : 'Resend code',
                               style: TextStyle(
-                                color: _countdown > 0 ? Colors.white38 : AppTheme.emeraldLight,
+                                color: _countdown > 0
+                                    ? Colors.white38
+                                    : AppTheme.emeraldLight,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
                               ),

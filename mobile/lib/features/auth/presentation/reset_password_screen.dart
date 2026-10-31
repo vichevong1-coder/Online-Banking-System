@@ -67,7 +67,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     } on ApiException catch (e) {
       setState(() => _errorMessage = e.message);
     } catch (_) {
-      setState(() => _errorMessage = "Couldn't reset password. Please try again.");
+      setState(
+        () => _errorMessage = "Couldn't reset password. Please try again.",
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -80,10 +82,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('New Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text(
+          'New Password',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -93,12 +102,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             const SizedBox(height: 10),
             const Text(
               'Set New Password',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               'Enter the 6-digit verification code sent for ${widget.identifier} and your new password.',
-              style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 28),
 
@@ -108,16 +125,25 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 decoration: BoxDecoration(
                   color: AppTheme.primaryRed.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.primaryRedLight.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: AppTheme.primaryRedLight.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: AppTheme.primaryRedLight, size: 20),
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppTheme.primaryRedLight,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -130,7 +156,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('6-Digit Verification Code', style: TextStyle(fontSize: 13, color: Colors.white70)),
+                  const Text(
+                    '6-Digit Verification Code',
+                    style: TextStyle(fontSize: 13, color: Colors.white70),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _codeController,
@@ -148,35 +177,59 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text('New Password', style: TextStyle(fontSize: 13, color: Colors.white70)),
+                  const Text(
+                    'New Password',
+                    style: TextStyle(fontSize: 13, color: Colors.white70),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'At least 8 characters',
-                      prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.lock_outline,
+                        color: Colors.white70,
+                        size: 20,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
                           color: Colors.white70,
                           size: 20,
                         ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text('Confirm New Password', style: TextStyle(fontSize: 13, color: Colors.white70)),
+                  const Text(
+                    'Confirm New Password',
+                    style: TextStyle(fontSize: 13, color: Colors.white70),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _confirmPasswordController,
                     obscureText: _obscurePassword,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                     decoration: const InputDecoration(
                       hintText: 'Repeat new password',
-                      prefixIcon: Icon(Icons.lock_reset, color: Colors.white70, size: 20),
+                      prefixIcon: Icon(
+                        Icons.lock_reset,
+                        color: Colors.white70,
+                        size: 20,
+                      ),
                     ),
                   ),
                 ],

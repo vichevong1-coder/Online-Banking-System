@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/core/widgets/app_state_view.dart';
 import 'package:mobile/features/account/data/account_api.dart';
 import 'package:mobile/features/account/data/account_models.dart';
 import 'package:mobile/features/account/presentation/money_format.dart';
@@ -25,6 +26,7 @@ class _PayBillScreenState extends State<PayBillScreen> {
   bool _isLoading = false;
   bool _fetchingAccounts = true;
   String? _errorMessage;
+  String? _loadError;
 
   @override
   void initState() {
@@ -43,8 +45,20 @@ class _PayBillScreenState extends State<PayBillScreen> {
         _fetchingAccounts = false;
       });
     } catch (_) {
-      setState(() => _fetchingAccounts = false);
+      if (!mounted) return;
+      setState(() {
+        _fetchingAccounts = false;
+        _loadError = "Couldn't load your accounts. Check your connection.";
+      });
     }
+  }
+
+  void _retryFetchAccounts() {
+    setState(() {
+      _fetchingAccounts = true;
+      _loadError = null;
+    });
+    _fetchAccounts();
   }
 
   IconData _iconForCategory(String category) {
@@ -72,14 +86,20 @@ class _PayBillScreenState extends State<PayBillScreen> {
       return;
     }
     if (billAcc.isEmpty) {
-      setState(() => _errorMessage = 'Please enter your customer/bill account number');
+      setState(
+        () => _errorMessage = 'Please enter your customer/bill account number',
+      );
       return;
     }
 
-    if (widget.provider.accountNumberPattern != null && widget.provider.accountNumberPattern!.isNotEmpty) {
+    if (widget.provider.accountNumberPattern != null &&
+        widget.provider.accountNumberPattern!.isNotEmpty) {
       final regex = RegExp(widget.provider.accountNumberPattern!);
       if (!regex.hasMatch(billAcc)) {
-        setState(() => _errorMessage = 'Account number must match pattern: ${widget.provider.accountNumberPattern}');
+        setState(
+          () => _errorMessage =
+              'Account number must match pattern: ${widget.provider.accountNumberPattern}',
+        );
         return;
       }
     }
@@ -88,26 +108,65 @@ class _PayBillScreenState extends State<PayBillScreen> {
       setState(() => _errorMessage = 'Please enter a valid amount');
       return;
     }
+    if (amount > _selectedAccount!.balance) {
+      final available = formatMoney(
+        _selectedAccount!.balance,
+        _selectedAccount!.currency,
+      );
+      setState(
+        () => _errorMessage =
+            'That is more than the available balance ($available)',
+      );
+      return;
+    }
 
     setState(() => _errorMessage = null);
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF0A2B24),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: AppTheme.surfaceElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Confirm Bill Payment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 16),
+            const Text(
+              'Confirm Bill Payment',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 20),
+            // The amount leads the sheet, matching the transfer confirmation.
+            Center(
+              child: Text(
+                formatMoney(amount, _selectedAccount!.currency),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.emeraldLight,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
             _summaryRow('Biller', widget.provider.name),
             _summaryRow('Bill Account Number', billAcc),
-            _summaryRow('Pay From Account', '${_selectedAccount!.accountNumber} (${_selectedAccount!.currency.toJson()})'),
-            _summaryRow('Payment Amount', formatMoney(amount, _selectedAccount!.currency)),
-            const SizedBox(height: 24),
+            _summaryRow(
+              'Pay From',
+              '${_selectedAccount!.accountNumber} (${_selectedAccount!.currency.toJson()})',
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Check the bill account number and amount before confirming.',
+              style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.4),
+            ),
+            const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
@@ -142,8 +201,18 @@ class _PayBillScreenState extends State<PayBillScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white60, fontSize: 13)),
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white60, fontSize: 13),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
@@ -179,7 +248,10 @@ class _PayBillScreenState extends State<PayBillScreen> {
     } on ApiException catch (e) {
       setState(() => _errorMessage = e.message);
     } catch (_) {
-      setState(() => _errorMessage = "Couldn't process bill payment. Please try again.");
+      setState(
+        () =>
+            _errorMessage = "Couldn't process bill payment. Please try again.",
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -192,13 +264,24 @@ class _PayBillScreenState extends State<PayBillScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(widget.provider.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(
+          widget.provider.name,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
       ),
       body: _fetchingAccounts
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.emeraldLight))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.emeraldLight),
+            )
+          : _loadError != null
+          ? AppErrorView(message: _loadError!, onRetry: _retryFetchAccounts)
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -212,7 +295,11 @@ class _PayBillScreenState extends State<PayBillScreen> {
                         CircleAvatar(
                           radius: 24,
                           backgroundColor: const Color(0x3300FFB2),
-                          child: Icon(_iconForCategory(widget.provider.category), color: AppTheme.emeraldLight, size: 24),
+                          child: Icon(
+                            _iconForCategory(widget.provider.category),
+                            color: AppTheme.emeraldLight,
+                            size: 24,
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -221,12 +308,19 @@ class _PayBillScreenState extends State<PayBillScreen> {
                             children: [
                               Text(
                                 widget.provider.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 'Category: ${widget.provider.category}',
-                                style: const TextStyle(color: Colors.white60, fontSize: 12),
+                                style: const TextStyle(
+                                  color: Colors.white60,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -242,16 +336,27 @@ class _PayBillScreenState extends State<PayBillScreen> {
                       decoration: BoxDecoration(
                         color: AppTheme.primaryRed.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.primaryRedLight.withValues(alpha: 0.5)),
+                        border: Border.all(
+                          color: AppTheme.primaryRedLight.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline, color: AppTheme.primaryRedLight, size: 20),
+                          const Icon(
+                            Icons.error_outline,
+                            color: AppTheme.primaryRedLight,
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               _errorMessage!,
-                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ],
@@ -261,37 +366,62 @@ class _PayBillScreenState extends State<PayBillScreen> {
                   ],
 
                   // Pay From Account
-                  const Text('Pay From Account', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Pay From Account',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   GlassCard(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<Account>(
                         value: _selectedAccount,
                         isExpanded: true,
-                        dropdownColor: const Color(0xFF0A2B24),
+                        dropdownColor: AppTheme.surfaceElevated,
                         items: _accounts.map((a) {
                           return DropdownMenuItem(
                             value: a,
                             child: Text(
                               '${a.accountNumber} (${a.currency.toJson()}) - ${formatMoney(a.balance, a.currency)}',
-                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           );
                         }).toList(),
-                        onChanged: (acc) => setState(() => _selectedAccount = acc),
+                        onChanged: (acc) =>
+                            setState(() => _selectedAccount = acc),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
 
                   // Bill Account Number
-                  const Text('Customer / Bill Account Number', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Customer / Bill Account Number',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   GlassCard(
                     child: TextField(
                       controller: _billAccountController,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                       decoration: InputDecoration(
                         hintText: widget.provider.accountNumberPattern != null
                             ? 'Pattern: ${widget.provider.accountNumberPattern}'
@@ -306,18 +436,42 @@ class _PayBillScreenState extends State<PayBillScreen> {
                   const SizedBox(height: 20),
 
                   // Amount
-                  const Text('Payment Amount', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Payment Amount',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   GlassCard(
                     child: TextField(
                       controller: _amountController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                       decoration: InputDecoration(
                         hintText: '0.00',
-                        hintStyle: const TextStyle(color: Colors.white30, fontSize: 24),
-                        prefixText: _selectedAccount != null && _selectedAccount!.currency == Currency.usd ? '\$ ' : 'KHR ',
-                        prefixStyle: const TextStyle(color: AppTheme.emeraldLight, fontSize: 24, fontWeight: FontWeight.bold),
+                        hintStyle: const TextStyle(
+                          color: Colors.white30,
+                          fontSize: 24,
+                        ),
+                        prefixText:
+                            _selectedAccount != null &&
+                                _selectedAccount!.currency == Currency.usd
+                            ? '\$ '
+                            : 'KHR ',
+                        prefixStyle: const TextStyle(
+                          color: AppTheme.emeraldLight,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                         filled: false,
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
@@ -325,6 +479,16 @@ class _PayBillScreenState extends State<PayBillScreen> {
                       ),
                     ),
                   ),
+                  if (_selectedAccount != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      'Available: ${formatMoney(_selectedAccount!.balance, _selectedAccount!.currency)}',
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 32),
 
                   PrimaryActionButton(

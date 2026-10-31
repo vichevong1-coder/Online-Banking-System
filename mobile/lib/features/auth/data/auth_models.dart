@@ -77,15 +77,16 @@ class AuthTokenResponse {
   final String lastName;
   final String role;
 
-  factory AuthTokenResponse.fromJson(Map<String, dynamic> json) => AuthTokenResponse(
-    accessToken: json['accessToken'] as String,
-    refreshToken: json['refreshToken'] as String,
-    tokenType: json['tokenType'] as String,
-    userId: json['userId'] as String,
-    firstName: json['firstName'] as String,
-    lastName: json['lastName'] as String,
-    role: json['role'] as String,
-  );
+  factory AuthTokenResponse.fromJson(Map<String, dynamic> json) =>
+      AuthTokenResponse(
+        accessToken: json['accessToken'] as String,
+        refreshToken: json['refreshToken'] as String,
+        tokenType: json['tokenType'] as String,
+        userId: json['userId'] as String,
+        firstName: json['firstName'] as String,
+        lastName: json['lastName'] as String,
+        role: json['role'] as String,
+      );
 }
 
 // Backend: com.obs.backend.feature.user.dto.UserProfileResponse (US-036).

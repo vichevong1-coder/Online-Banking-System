@@ -57,22 +57,25 @@ class TransferResponse {
   /// "ACLBKHPP:000123456789" → ("ACLBKHPP", "000123456789").
   String? get externalBankCode => externalRef?.split(':').first;
   String? get externalAccountNumber =>
-      externalRef != null && externalRef!.contains(':') ? externalRef!.split(':').last : null;
+      externalRef != null && externalRef!.contains(':')
+      ? externalRef!.split(':').last
+      : null;
 
-  factory TransferResponse.fromJson(Map<String, dynamic> json) => TransferResponse(
-    id: json['id'] as String,
-    reference: json['reference'] as String,
-    fromAccountId: json['fromAccountId'] as String,
-    fromAccountNumber: json['fromAccountNumber'] as String?,
-    toAccountId: json['toAccountId'] as String?,
-    toAccountNumber: json['toAccountNumber'] as String?,
-    externalRef: json['externalRef'] as String?,
-    amount: (json['amount'] as num).toDouble(),
-    currency: Currency.fromJson(json['currency'] as String),
-    status: TransferStatus.fromJson(json['status'] as String),
-    description: json['description'] as String?,
-    createdAt: json['createdAt'] as String? ?? '',
-  );
+  factory TransferResponse.fromJson(Map<String, dynamic> json) =>
+      TransferResponse(
+        id: json['id'] as String,
+        reference: json['reference'] as String,
+        fromAccountId: json['fromAccountId'] as String,
+        fromAccountNumber: json['fromAccountNumber'] as String?,
+        toAccountId: json['toAccountId'] as String?,
+        toAccountNumber: json['toAccountNumber'] as String?,
+        externalRef: json['externalRef'] as String?,
+        amount: (json['amount'] as num).toDouble(),
+        currency: Currency.fromJson(json['currency'] as String),
+        status: TransferStatus.fromJson(json['status'] as String),
+        description: json['description'] as String?,
+        createdAt: json['createdAt'] as String? ?? '',
+      );
 }
 
 /// US-025: `POST /transfers`. No currency field — the backend takes it from the
@@ -94,7 +97,8 @@ class InternalTransferRequest {
     'fromAccountId': fromAccountId,
     'toAccountId': toAccountId,
     'amount': amount,
-    if (description != null && description!.isNotEmpty) 'description': description,
+    if (description != null && description!.isNotEmpty)
+      'description': description,
   };
 }
 
@@ -118,7 +122,8 @@ class P2pTransferRequest {
     'fromAccountId': fromAccountId,
     'toAccountNumber': toAccountNumber,
     'amount': amount,
-    if (description != null && description!.isNotEmpty) 'description': description,
+    if (description != null && description!.isNotEmpty)
+      'description': description,
   };
 }
 
@@ -175,7 +180,12 @@ class CreateBeneficiaryRequest {
 /// Every field optional: PATCH only sends what changed, and `favorite` is
 /// boxed on the backend so "not sent" stays distinct from "set to false".
 class UpdateBeneficiaryRequest {
-  UpdateBeneficiaryRequest({this.displayName, this.bankCode, this.accountNumber, this.favorite});
+  UpdateBeneficiaryRequest({
+    this.displayName,
+    this.bankCode,
+    this.accountNumber,
+    this.favorite,
+  });
 
   final String? displayName;
   final String? bankCode;

@@ -47,32 +47,39 @@ void main() {
   });
 
   group('request payloads', () {
-    test('internal transfer sends no currency — the backend takes it from the account', () {
-      final json = InternalTransferRequest(
-        fromAccountId: 'a',
-        toAccountId: 'b',
-        amount: 10,
-      ).toJson();
+    test(
+      'internal transfer sends no currency — the backend takes it from the account',
+      () {
+        final json = InternalTransferRequest(
+          fromAccountId: 'a',
+          toAccountId: 'b',
+          amount: 10,
+        ).toJson();
 
-      expect(json.keys, containsAll(['fromAccountId', 'toAccountId', 'amount']));
-      expect(json.containsKey('currency'), isFalse);
-    });
+        expect(
+          json.keys,
+          containsAll(['fromAccountId', 'toAccountId', 'amount']),
+        );
+        expect(json.containsKey('currency'), isFalse);
+      },
+    );
 
-    test('p2p transfer names the destination by account number, with no currency', () {
-      final json = P2pTransferRequest(
-        fromAccountId: 'a',
-        toAccountNumber: '900000000002',
-        amount: 80,
-        description: 'Split dinner',
-      ).toJson();
+    test(
+      'p2p transfer names the destination by account number, with no currency',
+      () {
+        final json = P2pTransferRequest(
+          fromAccountId: 'a',
+          toAccountNumber: '900000000002',
+          amount: 80,
+          description: 'Split dinner',
+        ).toJson();
 
-      expect(json['toAccountNumber'], '900000000002');
-      expect(json['description'], 'Split dinner');
-      expect(json.containsKey('currency'), isFalse);
-      expect(json.containsKey('toAccountId'), isFalse);
-    });
-
-
+        expect(json['toAccountNumber'], '900000000002');
+        expect(json['description'], 'Split dinner');
+        expect(json.containsKey('currency'), isFalse);
+        expect(json.containsKey('toAccountId'), isFalse);
+      },
+    );
 
     test('beneficiary create/patch use displayName and favorite', () {
       expect(
@@ -85,7 +92,9 @@ void main() {
       );
 
       // PATCH sends only what changed, so "not sent" stays distinct from false.
-      expect(UpdateBeneficiaryRequest(favorite: true).toJson(), {'favorite': true});
+      expect(UpdateBeneficiaryRequest(favorite: true).toJson(), {
+        'favorite': true,
+      });
     });
   });
 

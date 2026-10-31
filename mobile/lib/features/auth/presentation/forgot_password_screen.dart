@@ -20,9 +20,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _handleForgot() async {
     final identifier = _identifierController.text.trim();
-    
+
     setState(() {
-      _identifierError = identifier.isEmpty ? 'Please enter your phone number or email' : null;
+      _identifierError = identifier.isEmpty
+          ? 'Please enter your phone number or email'
+          : null;
       _errorMessage = null;
     });
 
@@ -52,7 +54,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } on ApiException catch (e) {
       setState(() => _errorMessage = e.message);
     } catch (_) {
-      setState(() => _errorMessage = "Couldn't send reset code. Please try again.");
+      setState(
+        () => _errorMessage = "Couldn't send reset code. Please try again.",
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -65,10 +69,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Forgot Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text(
+          'Forgot Password',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -78,12 +89,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             const SizedBox(height: 10),
             const Text(
               'Reset Account Password',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 6),
             const Text(
               'Enter your registered phone number or email address. We will send you a 6-digit verification code.',
-              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 32),
 
@@ -93,16 +112,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 decoration: BoxDecoration(
                   color: AppTheme.primaryRed.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.primaryRedLight.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: AppTheme.primaryRedLight.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: AppTheme.primaryRedLight, size: 20),
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppTheme.primaryRedLight,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -118,7 +146,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               prefixIcon: Icons.account_circle_outlined,
               errorText: _identifierError,
               onChanged: (_) {
-                if (_identifierError != null) setState(() => _identifierError = null);
+                if (_identifierError != null) {
+                  setState(() => _identifierError = null);
+                }
               },
               onSubmitted: (_) => _handleForgot(),
             ),

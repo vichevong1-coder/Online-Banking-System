@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/notification/data/notification_api.dart';
 import 'package:mobile/features/notification/data/notification_models.dart';
+import 'package:mobile/core/widgets/app_state_view.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -83,34 +84,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Notifications',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.emeraldLight))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.emeraldLight),
+            )
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_error!, style: const TextStyle(color: AppTheme.primaryRedLight)),
-                      const SizedBox(height: 12),
-                      ElevatedButton(onPressed: _fetchNotifications, child: const Text('Retry')),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
+          ? AppErrorView(message: _error!, onRetry: _fetchNotifications)
+          : RefreshIndicator(
               onRefresh: _fetchNotifications,
               color: AppTheme.emeraldLight,
               child: _notifications.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.notifications_off_outlined, size: 64, color: Colors.white.withValues(alpha: 0.3)),
-                          const SizedBox(height: 16),
-                          const Text('No notifications yet', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                        ],
-                      ),
+                  ? AppEmptyView(
+                      icon: Icons.notifications_off_outlined,
+                      title: 'No notifications yet',
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
@@ -121,27 +112,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           margin: const EdgeInsets.only(bottom: 12),
                           child: GlassCard(
                             padding: const EdgeInsets.all(16),
-                            backgroundColor: item.read ? AppTheme.surfaceGlass : const Color(0x2E00B27A),
+                            backgroundColor: item.read
+                                ? AppTheme.surfaceGlass
+                                : const Color(0x2E00B27A),
                             borderRadius: 14,
                             onTap: () => _markAsRead(item),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 CircleAvatar(
-                                  backgroundColor: item.read ? Colors.white12 : const Color(0x3300FFB2),
+                                  backgroundColor: item.read
+                                      ? Colors.white12
+                                      : const Color(0x3300FFB2),
                                   child: Icon(
                                     _iconForType(item.type),
-                                    color: item.read ? Colors.white70 : AppTheme.emeraldLight,
+                                    color: item.read
+                                        ? Colors.white70
+                                        : AppTheme.emeraldLight,
                                     size: 20,
                                   ),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Expanded(
                                             child: Text(
@@ -149,7 +148,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                               style: TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 14,
-                                                color: item.read ? Colors.white : AppTheme.emeraldLight,
+                                                color: item.read
+                                                    ? Colors.white
+                                                    : AppTheme.emeraldLight,
                                               ),
                                             ),
                                           ),
@@ -167,14 +168,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       const SizedBox(height: 4),
                                       Text(
                                         item.message,
-                                        style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.3),
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12,
+                                          height: 1.3,
+                                        ),
                                       ),
                                       const SizedBox(height: 6),
                                       Text(
                                         item.createdAt.isNotEmpty
                                             ? item.createdAt.substring(0, 10)
                                             : '',
-                                        style: const TextStyle(color: Colors.white38, fontSize: 10),
+                                        style: const TextStyle(
+                                          color: Colors.white38,
+                                          fontSize: 10,
+                                        ),
                                       ),
                                     ],
                                   ),

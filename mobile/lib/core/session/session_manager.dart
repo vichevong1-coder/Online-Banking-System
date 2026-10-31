@@ -54,7 +54,8 @@ class SessionManager extends ChangeNotifier {
   String? get lastName => _lastName;
   String? get phone => _phone;
   String? get email => _email;
-  String get fullName => ('${_firstName ?? ''} ${_lastName ?? ''}').trim().isEmpty
+  String get fullName =>
+      ('${_firstName ?? ''} ${_lastName ?? ''}').trim().isEmpty
       ? 'Customer'
       : ('${_firstName ?? ''} ${_lastName ?? ''}').trim();
 
@@ -66,7 +67,10 @@ class SessionManager extends ChangeNotifier {
   /// Loads the profile, then trades the stored refresh token for a fresh access
   /// token. Bounded by a timeout: a backend that isn't running must not hold the
   /// app on a blank screen.
-  Future<void> init({String baseUrl = '', Duration timeout = const Duration(seconds: 5)}) async {
+  Future<void> init({
+    String baseUrl = '',
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
     // The finally is load-bearing: app.dart holds a splash until this flag
     // flips, and main() does not await this call, so anything thrown here
     // would otherwise strand the app on that splash with no way out.
@@ -80,7 +84,9 @@ class SessionManager extends ChangeNotifier {
 
       _refreshToken = await _readRefreshToken(prefs);
 
-      if (_refreshToken != null && _refreshToken!.isNotEmpty && baseUrl.isNotEmpty) {
+      if (_refreshToken != null &&
+          _refreshToken!.isNotEmpty &&
+          baseUrl.isNotEmpty) {
         await _exchangeRefreshToken(baseUrl, timeout);
       }
     } catch (_) {
@@ -184,7 +190,11 @@ class SessionManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateProfile({String? email, String? firstName, String? lastName}) async {
+  Future<void> updateProfile({
+    String? email,
+    String? firstName,
+    String? lastName,
+  }) async {
     if (email != null) _email = email;
     if (firstName != null) _firstName = firstName;
     if (lastName != null) _lastName = lastName;

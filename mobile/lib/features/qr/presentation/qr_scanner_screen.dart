@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/qr/data/qr_payload.dart';
+import 'package:mobile/features/qr/presentation/qr_scan_pay_screen.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 /// US-033's camera half. Pops the scanned payload string back to the caller —
@@ -42,7 +43,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       if (payload == null) {
         // Keep scanning — the customer may simply have framed a shop-loyalty
         // code. Telling them why is more useful than silently ignoring it.
-        setState(() => _rejected = "That isn't an Online Banking payment code.");
+        setState(
+          () => _rejected = "That isn't an Online Banking payment code.",
+        );
         continue;
       }
 
@@ -50,6 +53,24 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       Navigator.pop(context, payload);
       return;
     }
+  }
+
+  void _openKhqrScreen() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const QRScanPayScreen(initialTabIndex: 0),
+      ),
+    );
+  }
+
+  void _openTypeCodeScreen() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const QRScanPayScreen(initialTabIndex: 1),
+      ),
+    );
   }
 
   @override
@@ -61,8 +82,20 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Scan to pay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text(
+          'Scan to pay',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         actions: [
+          IconButton(
+            key: const ValueKey('toggle_khqr_button'),
+            tooltip: "CBA' QR",
+            icon: const Icon(
+              Icons.qr_code_2_rounded,
+              color: AppTheme.emeraldLight,
+            ),
+            onPressed: _openKhqrScreen,
+          ),
           IconButton(
             tooltip: 'Torch',
             icon: const Icon(Icons.flashlight_on_outlined, color: Colors.white),
@@ -89,7 +122,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   "This device can't scan QR codes. Type the code instead.",
                 _ => "The camera couldn't start. Type the code instead.",
               },
-              onTypeInstead: () => Navigator.pop(context),
+              onTypeInstead: _openTypeCodeScreen,
             ),
           ),
 
@@ -110,32 +143,67 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           Positioned(
             left: 24,
             right: 24,
-            bottom: 48,
+            bottom: 40,
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Text(
-                    _rejected ?? 'Point the camera at a personal or merchant QR code.',
+                    _rejected ??
+                        'Point the camera at a personal or merchant QR code.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _rejected != null ? AppTheme.primaryRedLight : Colors.white,
+                      color: _rejected != null
+                          ? AppTheme.primaryRedLight
+                          : Colors.white,
                       fontSize: 13,
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.keyboard_alt_outlined, color: AppTheme.emeraldLight, size: 18),
-                  label: const Text(
-                    'Type the code instead',
-                    style: TextStyle(color: AppTheme.emeraldLight, fontWeight: FontWeight.bold),
-                  ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton.icon(
+                      key: const ValueKey('scanner_view_khqr_button'),
+                      onPressed: _openKhqrScreen,
+                      icon: const Icon(
+                        Icons.qr_code_2_rounded,
+                        color: AppTheme.emeraldLight,
+                        size: 20,
+                      ),
+                      label: const Text(
+                        "CBA' QR",
+                        style: TextStyle(
+                          color: AppTheme.emeraldLight,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    TextButton.icon(
+                      onPressed: _openTypeCodeScreen,
+                      icon: const Icon(
+                        Icons.keyboard_alt_outlined,
+                        color: Colors.white70,
+                        size: 18,
+                      ),
+                      label: const Text(
+                        'Type code',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -160,18 +228,31 @@ class _CameraProblem extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.no_photography_outlined, color: Colors.white54, size: 56),
+          const Icon(
+            Icons.no_photography_outlined,
+            color: Colors.white54,
+            size: 56,
+          ),
           const SizedBox(height: 16),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryEmerald),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryEmerald,
+            ),
             onPressed: onTypeInstead,
-            child: const Text('Type the code instead', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Type the code instead',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),

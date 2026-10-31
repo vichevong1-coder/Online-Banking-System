@@ -37,7 +37,10 @@ class OtpCodeInputState extends State<OtpCodeInput> {
     super.initState();
     _controllers = List.generate(widget.length, (_) => TextEditingController());
     _focusNodes = List.generate(widget.length, (_) => FocusNode());
-    _keyNodes = List.generate(widget.length, (_) => FocusNode(skipTraversal: true, canRequestFocus: false));
+    _keyNodes = List.generate(
+      widget.length,
+      (_) => FocusNode(skipTraversal: true, canRequestFocus: false),
+    );
   }
 
   @override
@@ -67,15 +70,30 @@ class OtpCodeInputState extends State<OtpCodeInput> {
   }
 
   void _onChanged(int index, String value) {
-    // A paste lands as several characters in one field — spread it across the
-    // remaining boxes instead of dropping everything but the first digit.
     final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.length > 1) {
-      for (var i = 0; i < widget.length - index; i++) {
-        _controllers[index + i].text = i < digits.length ? digits[i] : '';
+    if (digits.length >= widget.length) {
+      // Full code paste: populate from first box regardless of focused box
+      for (var i = 0; i < widget.length; i++) {
+        _controllers[i].text = digits[i];
       }
-      final next = (index + digits.length).clamp(0, widget.length - 1);
-      _focusNodes[next].requestFocus();
+      _focusNodes.last.requestFocus();
+    } else if (digits.length > 1) {
+      final oldVal = _controllers[index].text;
+      if (digits.length == 2 && oldVal.isNotEmpty) {
+        // Single keystroke into already-filled box: replace with new digit
+        final newChar = digits.startsWith(oldVal) ? digits[1] : digits[0];
+        _controllers[index].text = newChar;
+        if (index < widget.length - 1) {
+          _focusNodes[index + 1].requestFocus();
+        }
+      } else {
+        // Multi-digit partial paste
+        for (var i = 0; i < widget.length - index; i++) {
+          _controllers[index + i].text = i < digits.length ? digits[i] : '';
+        }
+        final next = (index + digits.length).clamp(0, widget.length - 1);
+        _focusNodes[next].requestFocus();
+      }
     } else {
       _controllers[index].text = digits;
       if (digits.isNotEmpty && index < widget.length - 1) {
@@ -122,12 +140,16 @@ class OtpCodeInputState extends State<OtpCodeInput> {
                 aspectRatio: 0.82,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: filled ? const Color(0x2600FFB2) : AppTheme.surfaceGlass,
+                    color: filled
+                        ? const Color(0x2600FFB2)
+                        : AppTheme.surfaceGlass,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: widget.hasError
                           ? AppTheme.primaryRedLight
-                          : (focused || filled ? AppTheme.emeraldLight : AppTheme.surfaceGlassBorder),
+                          : (focused || filled
+                                ? AppTheme.emeraldLight
+                                : AppTheme.surfaceGlassBorder),
                       width: focused ? 1.8 : 1.2,
                     ),
                   ),
@@ -152,7 +174,13 @@ class OtpCodeInputState extends State<OtpCodeInput> {
                         focusedBorder: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
                       ),
-                      onTap: () => setState(() {}),
+                      onTap: () {
+                        _controllers[index].selection = TextSelection(
+                          baseOffset: 0,
+                          extentOffset: _controllers[index].text.length,
+                        );
+                        setState(() {});
+                      },
                       onChanged: (value) => _onChanged(index, value),
                     ),
                   ),

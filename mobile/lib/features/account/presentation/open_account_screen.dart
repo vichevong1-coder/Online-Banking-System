@@ -48,10 +48,17 @@ class _OpenAccountScreenState extends State<OpenAccountScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Open New Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text(
+          'Open New Account',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
       ),
       body: SafeArea(
         child: ListView(
@@ -59,7 +66,11 @@ class _OpenAccountScreenState extends State<OpenAccountScreen> {
           children: [
             const Text(
               'Select Account Details',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 6),
             const Text(
@@ -74,9 +85,14 @@ class _OpenAccountScreenState extends State<OpenAccountScreen> {
                 decoration: BoxDecoration(
                   color: AppTheme.primaryRed.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.primaryRedLight.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: AppTheme.primaryRedLight.withValues(alpha: 0.5),
+                  ),
                 ),
-                child: Text(_errorText!, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                child: Text(
+                  _errorText!,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
               ),
               const SizedBox(height: 20),
             ],
@@ -85,28 +101,62 @@ class _OpenAccountScreenState extends State<OpenAccountScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Account Type', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Account Type',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<AccountType>(
                     initialValue: _accountType,
-                    dropdownColor: const Color(0xFF0A2B24),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    dropdownColor: AppTheme.surfaceElevated,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                     items: AccountType.values
-                        .map((type) => DropdownMenuItem(value: type, child: Text(type.label)))
+                        .map(
+                          (type) => DropdownMenuItem(
+                            value: type,
+                            child: Text(type.label),
+                          ),
+                        )
                         .toList(),
-                    onChanged: _isSubmitting ? null : (value) => setState(() => _accountType = value!),
+                    onChanged: _isSubmitting
+                        ? null
+                        : (value) => setState(() => _accountType = value!),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Currency', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Currency',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<Currency>(
                     initialValue: _currency,
-                    dropdownColor: const Color(0xFF0A2B24),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    dropdownColor: AppTheme.surfaceElevated,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                     items: Currency.values
-                        .map((currency) => DropdownMenuItem(value: currency, child: Text(currency.toJson())))
+                        .map(
+                          (currency) => DropdownMenuItem(
+                            value: currency,
+                            child: Text(currency.toJson()),
+                          ),
+                        )
                         .toList(),
-                    onChanged: _isSubmitting ? null : (value) => setState(() => _currency = value!),
+                    onChanged: _isSubmitting
+                        ? null
+                        : (value) => setState(() => _currency = value!),
                   ),
                 ],
               ),

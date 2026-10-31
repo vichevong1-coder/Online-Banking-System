@@ -46,11 +46,7 @@ class CardModel {
 }
 
 class CreateCardRequest {
-  CreateCardRequest({
-    required this.accountId,
-    this.cardHolderName,
-    this.pin,
-  });
+  CreateCardRequest({required this.accountId, this.cardHolderName, this.pin});
 
   final String accountId;
   final String? cardHolderName;
@@ -58,17 +54,14 @@ class CreateCardRequest {
 
   Map<String, dynamic> toJson() => {
     'accountId': accountId,
-    if (cardHolderName != null && cardHolderName!.isNotEmpty) 'cardHolderName': cardHolderName,
+    if (cardHolderName != null && cardHolderName!.isNotEmpty)
+      'cardHolderName': cardHolderName,
     if (pin != null && pin!.isNotEmpty) 'pin': pin,
   };
 }
 
 class UpdateCardRequest {
-  UpdateCardRequest({
-    this.pin,
-    this.dailyLimit,
-    this.perTransactionLimit,
-  });
+  UpdateCardRequest({this.pin, this.dailyLimit, this.perTransactionLimit});
 
   final String? pin;
   final double? dailyLimit;

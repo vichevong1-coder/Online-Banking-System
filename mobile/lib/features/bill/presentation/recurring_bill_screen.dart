@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/account/data/account_api.dart';
 import 'package:mobile/features/account/data/account_models.dart';
 import 'package:mobile/features/account/presentation/money_format.dart';
-import 'package:mobile/features/auth/data/auth_models.dart' show formatLocalDate;
+import 'package:mobile/features/auth/data/auth_models.dart'
+    show formatLocalDate;
 import 'package:mobile/features/bill/data/bill_api.dart';
 import 'package:mobile/features/bill/data/bill_models.dart';
+import 'package:mobile/core/widgets/app_state_view.dart';
 
 class RecurringBillScreen extends StatefulWidget {
   const RecurringBillScreen({super.key});
@@ -66,47 +69,73 @@ class _RecurringBillScreenState extends State<RecurringBillScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
-          backgroundColor: const Color(0xFF0A2B24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Schedule Recurring Bill', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          backgroundColor: AppTheme.surfaceElevated,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Schedule Recurring Bill',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<BillProvider>(
                   initialValue: selectedProvider,
-                  dropdownColor: const Color(0xFF0A2B24),
+                  dropdownColor: AppTheme.surfaceElevated,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Biller / Provider'),
-                  items: _providers.map((p) => DropdownMenuItem(value: p, child: Text(p.name))).toList(),
+                  decoration: const InputDecoration(
+                    labelText: 'Biller / Provider',
+                  ),
+                  items: _providers
+                      .map(
+                        (p) => DropdownMenuItem(value: p, child: Text(p.name)),
+                      )
+                      .toList(),
                   onChanged: (p) => setModalState(() => selectedProvider = p!),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<Account>(
                   initialValue: selectedAccount,
-                  dropdownColor: const Color(0xFF0A2B24),
+                  dropdownColor: AppTheme.surfaceElevated,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(labelText: 'From Account'),
-                  items: _accounts.map((a) => DropdownMenuItem(value: a, child: Text('${a.accountNumber} (${a.currency.toJson()})'))).toList(),
+                  items: _accounts
+                      .map(
+                        (a) => DropdownMenuItem(
+                          value: a,
+                          child: Text(
+                            '${a.accountNumber} (${a.currency.toJson()})',
+                          ),
+                        ),
+                      )
+                      .toList(),
                   onChanged: (a) => setModalState(() => selectedAccount = a!),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: billAccCtrl,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Bill Account Number'),
+                  decoration: const InputDecoration(
+                    labelText: 'Bill Account Number',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(labelText: 'Amount (${selectedAccount.currency.toJson()})'),
+                  decoration: InputDecoration(
+                    labelText: 'Amount (${selectedAccount.currency.toJson()})',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: frequency,
-                  dropdownColor: const Color(0xFF0A2B24),
+                  dropdownColor: AppTheme.surfaceElevated,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(labelText: 'Frequency'),
                   items: const [
@@ -122,14 +151,27 @@ class _RecurringBillScreenState extends State<RecurringBillScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white60),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryEmerald),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryEmerald,
+              ),
               onPressed: () async {
                 final billAcc = billAccCtrl.text.trim();
                 final amount = double.tryParse(amountCtrl.text.trim());
-                if (billAcc.isEmpty || amount == null || amount <= 0) return;
+                if (billAcc.isEmpty || amount == null || amount <= 0) {
+                  // Say what is missing instead of silently ignoring the tap.
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Enter a bill account number and a valid amount.'),
+                    ),
+                  );
+                  return;
+                }
                 Navigator.pop(ctx);
                 try {
                   await BillApi().createRecurring(
@@ -144,13 +186,31 @@ class _RecurringBillScreenState extends State<RecurringBillScreen> {
                     ),
                   );
                   _loadData();
-                } catch (e) {
+                } on ApiException catch (e) {
                   messenger.showSnackBar(
-                    SnackBar(content: Text('Failed to schedule: $e'), backgroundColor: AppTheme.primaryRed),
+                    SnackBar(
+                      content: Text(e.message),
+                      backgroundColor: AppTheme.primaryRed,
+                    ),
+                  );
+                } catch (_) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: const Text(
+                        "Couldn't schedule the payment. Please try again.",
+                      ),
+                      backgroundColor: AppTheme.primaryRed,
+                    ),
                   );
                 }
               },
-              child: const Text('Schedule', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Schedule',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
@@ -172,104 +232,143 @@ class _RecurringBillScreenState extends State<RecurringBillScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Recurring Bill Payments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text(
+          'Recurring Bill Payments',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: AppTheme.emeraldLight),
+            icon: const Icon(
+              Icons.add_circle_outline,
+              color: AppTheme.emeraldLight,
+            ),
             onPressed: _showAddRecurringDialog,
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.emeraldLight))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.emeraldLight),
+            )
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_error!, style: const TextStyle(color: AppTheme.primaryRedLight)),
-                      const SizedBox(height: 12),
-                      ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadData,
-                  color: AppTheme.emeraldLight,
-                  child: _recurringList.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.schedule, size: 64, color: Colors.white.withValues(alpha: 0.3)),
-                              const SizedBox(height: 16),
-                              const Text('No scheduled recurring payments', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                              const SizedBox(height: 12),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryEmerald),
-                                icon: const Icon(Icons.add, color: Colors.white),
-                                label: const Text('Schedule Bill Payment', style: TextStyle(color: Colors.white)),
-                                onPressed: _showAddRecurringDialog,
-                              ),
-                            ],
+          ? AppErrorView(message: _error!, onRetry: _loadData)
+          : RefreshIndicator(
+              onRefresh: _loadData,
+              color: AppTheme.emeraldLight,
+              child: _recurringList.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.schedule,
+                            size: 64,
+                            color: Colors.white.withValues(alpha: 0.3),
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _recurringList.length,
-                          itemBuilder: (ctx, idx) {
-                            final item = _recurringList[idx];
-                            final currency = Currency.values.firstWhere(
-                              (c) => c.name.toUpperCase() == item.currency.toUpperCase(),
-                              orElse: () => Currency.usd,
-                            );
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No scheduled recurring payments',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryEmerald,
+                            ),
+                            icon: const Icon(Icons.add, color: Colors.white),
+                            label: const Text(
+                              'Schedule Bill Payment',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            onPressed: _showAddRecurringDialog,
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _recurringList.length,
+                      itemBuilder: (ctx, idx) {
+                        final item = _recurringList[idx];
+                        final currency = Currency.values.firstWhere(
+                          (c) =>
+                              c.name.toUpperCase() ==
+                              item.currency.toUpperCase(),
+                          orElse: () => Currency.usd,
+                        );
 
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: GlassCard(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      backgroundColor: const Color(0x3300FFB2),
-                                      child: const Icon(Icons.autorenew, color: AppTheme.emeraldLight),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            item.providerName,
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'Acc: ${item.billAccountNumber} • ${item.frequency}',
-                                            style: const TextStyle(fontSize: 12, color: Colors.white60),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            formatMoney(item.amount, currency),
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.emeraldLight),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.cancel_outlined, color: AppTheme.primaryRedLight, size: 22),
-                                      onPressed: () => _cancelRecurring(item),
-                                    ),
-                                  ],
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: GlassCard(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: const Color(0x3300FFB2),
+                                  child: const Icon(
+                                    Icons.autorenew,
+                                    color: AppTheme.emeraldLight,
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.providerName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Acc: ${item.billAccountNumber} • ${item.frequency}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white60,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        formatMoney(item.amount, currency),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: AppTheme.emeraldLight,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.cancel_outlined,
+                                    color: AppTheme.primaryRedLight,
+                                    size: 22,
+                                  ),
+                                  onPressed: () => _cancelRecurring(item),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
     );
   }
 }

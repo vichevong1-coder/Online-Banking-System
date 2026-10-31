@@ -6,20 +6,32 @@ class AuthApi {
 
   final ApiClient _client;
 
-  Future<void> register(RegisterRequest request) => _client.post('/auth/register', request.toJson());
+  Future<void> register(RegisterRequest request) =>
+      _client.post('/auth/register', request.toJson());
 
-  Future<void> verifyRegistrationOtp({required String phone, required String code}) =>
-      _client.post('/auth/otp/verify', {'phone': phone, 'code': code});
+  Future<void> verifyRegistrationOtp({
+    required String phone,
+    required String code,
+  }) => _client.post('/auth/otp/verify', {'phone': phone, 'code': code});
 
   Future<void> resendRegistrationOtp({required String phone}) =>
       _client.post('/auth/otp/resend', {'phone': phone});
 
-  Future<LoginResponse> login({required String phone, required String password}) async {
-    final json = await _client.post('/auth/login', {'phone': phone, 'password': password});
+  Future<LoginResponse> login({
+    required String phone,
+    required String password,
+  }) async {
+    final json = await _client.post('/auth/login', {
+      'phone': phone,
+      'password': password,
+    });
     return LoginResponse.fromJson(json!);
   }
 
-  Future<AuthTokenResponse> verifyTwoFactor({required String challengeToken, required String code}) async {
+  Future<AuthTokenResponse> verifyTwoFactor({
+    required String challengeToken,
+    required String code,
+  }) async {
     final json = await _client.post('/auth/2fa/verify', {
       'challengeToken': challengeToken,
       'code': code,
@@ -27,8 +39,12 @@ class AuthApi {
     return AuthTokenResponse.fromJson(json!);
   }
 
-  Future<LoginResponse> resendTwoFactor({required String challengeToken}) async {
-    final json = await _client.post('/auth/2fa/resend', {'challengeToken': challengeToken});
+  Future<LoginResponse> resendTwoFactor({
+    required String challengeToken,
+  }) async {
+    final json = await _client.post('/auth/2fa/resend', {
+      'challengeToken': challengeToken,
+    });
     return LoginResponse.fromJson(json!);
   }
 
@@ -39,12 +55,11 @@ class AuthApi {
     required String identifier,
     required String code,
     required String newPassword,
-  }) =>
-      _client.post('/auth/password/reset', {
-        'identifier': identifier,
-        'code': code,
-        'newPassword': newPassword,
-      });
+  }) => _client.post('/auth/password/reset', {
+    'identifier': identifier,
+    'code': code,
+    'newPassword': newPassword,
+  });
 
   Future<UserProfile> getProfile() async {
     final json = await _client.get('/me');
@@ -59,9 +74,8 @@ class AuthApi {
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
-  }) =>
-      _client.post('/me/password', {
-        'currentPassword': currentPassword,
-        'newPassword': newPassword,
-      });
+  }) => _client.post('/me/password', {
+    'currentPassword': currentPassword,
+    'newPassword': newPassword,
+  });
 }

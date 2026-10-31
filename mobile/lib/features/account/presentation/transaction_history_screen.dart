@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/core/api/api_client.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/core/widgets/app_state_view.dart';
 import 'package:mobile/features/account/data/account_api.dart';
 import 'package:mobile/features/account/data/account_models.dart';
 import 'package:mobile/features/account/presentation/money_format.dart';
-import 'package:mobile/features/auth/data/auth_models.dart' show formatLocalDate;
+import 'package:mobile/features/auth/data/auth_models.dart'
+    show formatLocalDate;
 
 class TransactionHistoryScreen extends StatefulWidget {
   final Account account;
@@ -17,7 +19,8 @@ class TransactionHistoryScreen extends StatefulWidget {
   });
 
   @override
-  State<TransactionHistoryScreen> createState() => _TransactionHistoryScreenState();
+  State<TransactionHistoryScreen> createState() =>
+      _TransactionHistoryScreenState();
 }
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
@@ -67,7 +70,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       _totalPages = null;
     });
     try {
-      final result = await _api.listTransactions(widget.account.id, _queryFor(0));
+      final result = await _api.listTransactions(
+        widget.account.id,
+        _queryFor(0),
+      );
       if (!mounted) return;
       setState(() {
         _items.addAll(result.content);
@@ -87,7 +93,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   Future<void> _loadMore() async {
     setState(() => _isLoadingMore = true);
     try {
-      final result = await _api.listTransactions(widget.account.id, _queryFor(_page + 1));
+      final result = await _api.listTransactions(
+        widget.account.id,
+        _queryFor(_page + 1),
+      );
       if (!mounted) return;
       setState(() {
         _items.addAll(result.content);
@@ -96,7 +105,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       });
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
       if (mounted) {
         setState(() => _isLoadingMore = false);
@@ -132,7 +143,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -151,13 +166,22 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   children: [
                     DropdownButtonFormField<TransactionType?>(
                       initialValue: _type,
-                      dropdownColor: const Color(0xFF0A2B24),
+                      dropdownColor: AppTheme.surfaceElevated,
                       style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Transaction Type', isDense: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Transaction Type',
+                        isDense: true,
+                      ),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('All Types')),
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('All Types'),
+                        ),
                         ...TransactionType.values.map(
-                          (type) => DropdownMenuItem(value: type, child: Text(type.label)),
+                          (type) => DropdownMenuItem(
+                            value: type,
+                            child: Text(type.label),
+                          ),
                         ),
                       ],
                       onChanged: (value) => setState(() => _type = value),
@@ -172,7 +196,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               side: const BorderSide(color: Colors.white24),
                             ),
                             onPressed: () => _pickDate(isFrom: true),
-                            child: Text(_fromDate == null ? 'From date' : formatLocalDate(_fromDate!)),
+                            child: Text(
+                              _fromDate == null
+                                  ? 'From date'
+                                  : formatLocalDate(_fromDate!),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -183,7 +211,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               side: const BorderSide(color: Colors.white24),
                             ),
                             onPressed: () => _pickDate(isFrom: false),
-                            child: Text(_toDate == null ? 'To date' : formatLocalDate(_toDate!)),
+                            child: Text(
+                              _toDate == null
+                                  ? 'To date'
+                                  : formatLocalDate(_toDate!),
+                            ),
                           ),
                         ),
                       ],
@@ -195,8 +227,13 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           child: TextField(
                             controller: _minAmountController,
                             style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(labelText: 'Min amount', isDense: true),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Min amount',
+                              isDense: true,
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -204,8 +241,13 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           child: TextField(
                             controller: _maxAmountController,
                             style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(labelText: 'Max amount', isDense: true),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Max amount',
+                              isDense: true,
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                           ),
                         ),
                       ],
@@ -228,13 +270,19 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   Widget _buildList() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: AppTheme.emeraldLight));
+      return const Center(
+        child: CircularProgressIndicator(color: AppTheme.emeraldLight),
+      );
     }
     if (_errorText != null) {
-      return Center(child: Text(_errorText!, style: const TextStyle(color: AppTheme.primaryRedLight)));
+      return AppErrorView(message: _errorText!, onRetry: _applyFilters);
     }
     if (_items.isEmpty) {
-      return const Center(child: Text('No transactions match these filters.', style: TextStyle(color: Colors.white60)));
+      return const AppEmptyView(
+        icon: Icons.receipt_long_outlined,
+        title: 'No transactions match these filters',
+        subtitle: 'Try a wider date range or a different type.',
+      );
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -248,9 +296,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Center(
               child: _isLoadingMore
-                  ? const CircularProgressIndicator(color: AppTheme.emeraldLight)
+                  ? const CircularProgressIndicator(
+                      color: AppTheme.emeraldLight,
+                    )
                   : OutlinedButton(
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white24)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white24),
+                      ),
                       onPressed: _loadMore,
                       child: const Text('Load more'),
                     ),
@@ -258,7 +311,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           );
         }
         final tx = _items[index];
-        final isCredit = tx.type == TransactionType.transferIn || tx.type == TransactionType.deposit;
+        final isCredit =
+            tx.type == TransactionType.transferIn ||
+            tx.type == TransactionType.deposit;
         final sign = isCredit ? '+' : '-';
         final color = isCredit ? const Color(0xFF69F0AE) : Colors.white;
 
@@ -270,7 +325,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: isCredit ? const Color(0x3300C853) : const Color(0x33FF3B30),
+                  backgroundColor: isCredit
+                      ? const Color(0x3300C853)
+                      : const Color(0x33FF3B30),
                   child: Icon(
                     isCredit ? Icons.arrow_downward : Icons.arrow_upward,
                     color: isCredit ? Colors.greenAccent : Colors.redAccent,
@@ -286,21 +343,32 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         tx.description != null && tx.description!.isNotEmpty
                             ? tx.description!
                             : tx.type.name.toUpperCase(),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
                         formatLocalDate(tx.createdAt),
-                        style: const TextStyle(fontSize: 11, color: Colors.white60),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.white60,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 Text(
                   '$sign ${formatMoney(tx.amount, tx.currency)}',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: color,
+                  ),
                 ),
               ],
             ),

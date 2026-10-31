@@ -27,6 +27,7 @@ class QrPayRequest {
     'fromAccountId': fromAccountId,
     if (amount != null) 'amount': amount,
     if (currency != null) 'currency': currency,
-    if (description != null && description!.isNotEmpty) 'description': description,
+    if (description != null && description!.isNotEmpty)
+      'description': description,
   };
 }

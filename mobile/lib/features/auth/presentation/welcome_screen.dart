@@ -9,6 +9,15 @@ class WelcomeLandingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GradientScaffold(
+      decoration: const BoxDecoration(
+        color: AppTheme.baseBackground,
+        gradient: RadialGradient(
+          center: Alignment(0, -0.45),
+          radius: 0.85,
+          colors: [Color(0x2600B27A), AppTheme.baseBackground],
+          stops: [0.0, 0.75],
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
         child: Column(
@@ -21,7 +30,10 @@ class WelcomeLandingScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.5),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  width: 1.5,
+                ),
               ),
               child: const Icon(
                 Icons.account_balance,
@@ -63,7 +75,7 @@ class WelcomeLandingScreen extends StatelessWidget {
                     color: Colors.black26,
                     blurRadius: 10,
                     offset: Offset(0, 4),
-                  )
+                  ),
                 ],
               ),
               child: Material(
@@ -78,7 +90,11 @@ class WelcomeLandingScreen extends StatelessWidget {
                     padding: EdgeInsets.symmetric(horizontal: 16.0),
                     child: Row(
                       children: [
-                        Icon(Icons.phone_android, color: Colors.white, size: 28),
+                        Icon(
+                          Icons.phone_android,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                         SizedBox(width: 14),
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -86,11 +102,18 @@ class WelcomeLandingScreen extends StatelessWidget {
                           children: [
                             Text(
                               'Sign In to Your Account',
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                             Text(
                               'For existing online banking customers',
-                              style: TextStyle(fontSize: 11, color: Colors.white70),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.white70,
+                              ),
                             ),
                           ],
                         ),
@@ -118,13 +141,19 @@ class WelcomeLandingScreen extends StatelessWidget {
                 height: 58,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                  ),
                   color: Colors.black.withValues(alpha: 0.2),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: const Row(
                   children: [
-                    Icon(Icons.account_balance_wallet_outlined, color: Colors.white, size: 28),
+                    Icon(
+                      Icons.account_balance_wallet_outlined,
+                      color: Colors.white,
+                      size: 28,
+                    ),
                     SizedBox(width: 14),
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -132,7 +161,11 @@ class WelcomeLandingScreen extends StatelessWidget {
                       children: [
                         Text(
                           'Open Instant Account',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                         Text(
                           'Register your new account in minutes',

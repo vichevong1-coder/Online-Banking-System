@@ -1,5 +1,6 @@
 import 'package:mobile/features/transfer/data/transfer_models.dart';
 import 'package:mobile/features/account/data/account_models.dart';
+
 class BillProvider {
   BillProvider({
     required this.id,
@@ -117,21 +118,22 @@ class RecurringBillPayment {
   final bool active;
   final String createdAt;
 
-  factory RecurringBillPayment.fromJson(Map<String, dynamic> json) => RecurringBillPayment(
-    id: json['id'] as String,
-    providerId: json['providerId'] as String,
-    providerName: json['providerName'] as String? ?? 'Provider',
-    providerCategory: json['providerCategory'] as String?,
-    accountId: json['accountId'] as String,
-    accountNumber: json['accountNumber'] as String? ?? '',
-    billAccountNumber: json['billAccountNumber'] as String,
-    amount: (json['amount'] as num).toDouble(),
-    currency: json['currency'] as String,
-    frequency: json['frequency'] as String,
-    nextPaymentDate: json['nextPaymentDate'] as String,
-    active: json['active'] as bool? ?? true,
-    createdAt: json['createdAt'] as String? ?? '',
-  );
+  factory RecurringBillPayment.fromJson(Map<String, dynamic> json) =>
+      RecurringBillPayment(
+        id: json['id'] as String,
+        providerId: json['providerId'] as String,
+        providerName: json['providerName'] as String? ?? 'Provider',
+        providerCategory: json['providerCategory'] as String?,
+        accountId: json['accountId'] as String,
+        accountNumber: json['accountNumber'] as String? ?? '',
+        billAccountNumber: json['billAccountNumber'] as String,
+        amount: (json['amount'] as num).toDouble(),
+        currency: json['currency'] as String,
+        frequency: json['frequency'] as String,
+        nextPaymentDate: json['nextPaymentDate'] as String,
+        active: json['active'] as bool? ?? true,
+        createdAt: json['createdAt'] as String? ?? '',
+      );
 }
 
 class PayBillRequest {

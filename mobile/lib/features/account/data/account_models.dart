@@ -1,4 +1,5 @@
-import 'package:mobile/features/auth/data/auth_models.dart' show formatLocalDate;
+import 'package:mobile/features/auth/data/auth_models.dart'
+    show formatLocalDate;
 
 // Backend: com.obs.backend.feature.account.entity.AccountType (US-013/014).
 enum AccountType {
@@ -60,7 +61,8 @@ enum TransactionType {
     TransactionType.transferOut => 'Transfer out',
   };
 
-  bool get isCredit => this == TransactionType.deposit || this == TransactionType.transferIn;
+  bool get isCredit =>
+      this == TransactionType.deposit || this == TransactionType.transferIn;
 }
 
 // Backend: com.obs.backend.feature.account.dto.AccountResponse (US-013).
@@ -93,7 +95,12 @@ class Account {
 
 // Backend: com.obs.backend.feature.account.dto.BalanceResponse (US-015).
 class Balance {
-  Balance({required this.accountId, required this.accountNumber, required this.currency, required this.balance});
+  Balance({
+    required this.accountId,
+    required this.accountNumber,
+    required this.currency,
+    required this.balance,
+  });
 
   final String accountId;
   final String accountNumber;
@@ -128,15 +135,16 @@ class BankTransaction {
   final double balanceAfter;
   final DateTime createdAt;
 
-  factory BankTransaction.fromJson(Map<String, dynamic> json) => BankTransaction(
-    id: json['id'] as String,
-    type: TransactionType.fromJson(json['type'] as String),
-    amount: (json['amount'] as num).toDouble(),
-    currency: Currency.fromJson(json['currency'] as String),
-    description: json['description'] as String?,
-    balanceAfter: (json['balanceAfter'] as num).toDouble(),
-    createdAt: DateTime.parse(json['createdAt'] as String),
-  );
+  factory BankTransaction.fromJson(Map<String, dynamic> json) =>
+      BankTransaction(
+        id: json['id'] as String,
+        type: TransactionType.fromJson(json['type'] as String),
+        amount: (json['amount'] as num).toDouble(),
+        currency: Currency.fromJson(json['currency'] as String),
+        description: json['description'] as String?,
+        balanceAfter: (json['balanceAfter'] as num).toDouble(),
+        createdAt: DateTime.parse(json['createdAt'] as String),
+      );
 }
 
 // Backend: com.obs.backend.common.dto.PageResponse<T> (generic Spring Data page wrapper).
@@ -155,15 +163,16 @@ class TransactionPage {
   final int totalElements;
   final int totalPages;
 
-  factory TransactionPage.fromJson(Map<String, dynamic> json) => TransactionPage(
-    content: (json['content'] as List<dynamic>)
-        .map((e) => BankTransaction.fromJson(e as Map<String, dynamic>))
-        .toList(),
-    page: json['page'] as int,
-    size: json['size'] as int,
-    totalElements: json['totalElements'] as int,
-    totalPages: json['totalPages'] as int,
-  );
+  factory TransactionPage.fromJson(Map<String, dynamic> json) =>
+      TransactionPage(
+        content: (json['content'] as List<dynamic>)
+            .map((e) => BankTransaction.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        page: json['page'] as int,
+        size: json['size'] as int,
+        totalElements: json['totalElements'] as int,
+        totalPages: json['totalPages'] as int,
+      );
 
   bool get hasMore => page + 1 < totalPages;
 }
@@ -175,14 +184,25 @@ class OpenAccountRequest {
   final AccountType accountType;
   final Currency currency;
 
-  Map<String, dynamic> toJson() => {'accountType': accountType.toJson(), 'currency': currency.toJson()};
+  Map<String, dynamic> toJson() => {
+    'accountType': accountType.toJson(),
+    'currency': currency.toJson(),
+  };
 }
 
 // Backend: com.obs.backend.feature.account.dto.TransactionFilter (US-017/018), plus paging.
 // Builds the query map for GET /accounts/{id}/transactions — keys are omitted rather than sent
 // empty, since @RequestParam BigDecimal/LocalDate fields 400 on an empty string.
 class TransactionQuery {
-  TransactionQuery({this.type, this.fromDate, this.toDate, this.minAmount, this.maxAmount, this.page = 0, this.size = 20});
+  TransactionQuery({
+    this.type,
+    this.fromDate,
+    this.toDate,
+    this.minAmount,
+    this.maxAmount,
+    this.page = 0,
+    this.size = 20,
+  });
 
   final TransactionType? type;
   final DateTime? fromDate;
@@ -205,10 +225,9 @@ class TransactionQuery {
 
 class AccountLookupResponse {
   AccountLookupResponse({required this.maskedName});
-  
+
   final String maskedName;
-  
-  factory AccountLookupResponse.fromJson(Map<String, dynamic> json) => AccountLookupResponse(
-    maskedName: json['maskedName'] as String,
-  );
+
+  factory AccountLookupResponse.fromJson(Map<String, dynamic> json) =>
+      AccountLookupResponse(maskedName: json['maskedName'] as String);
 }

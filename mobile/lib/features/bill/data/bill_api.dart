@@ -7,9 +7,12 @@ class BillApi {
   final ApiClient _client;
 
   Future<List<BillProvider>> listProviders({String? category}) async {
-    final json = await _client.get('/bill-providers', query: {
-      if (category != null && category.isNotEmpty) 'category': category,
-    });
+    final json = await _client.get(
+      '/bill-providers',
+      query: {
+        if (category != null && category.isNotEmpty) 'category': category,
+      },
+    );
     return (json as List<dynamic>)
         .map((e) => BillProvider.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -20,13 +23,18 @@ class BillApi {
     return BillPayment.fromJson(json!);
   }
 
-  Future<List<BillPayment>> getPaymentHistory({int page = 0, int size = 20}) async {
-    final json = await _client.get('/bill-payments', query: {
-      'page': page.toString(),
-      'size': size.toString(),
-    });
+  Future<List<BillPayment>> getPaymentHistory({
+    int page = 0,
+    int size = 20,
+  }) async {
+    final json = await _client.get(
+      '/bill-payments',
+      query: {'page': page.toString(), 'size': size.toString()},
+    );
     final content = (json as Map<String, dynamic>)['content'] as List<dynamic>;
-    return content.map((e) => BillPayment.fromJson(e as Map<String, dynamic>)).toList();
+    return content
+        .map((e) => BillPayment.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<BillPayment> getPaymentReceipt(String id) async {
@@ -34,8 +42,13 @@ class BillApi {
     return BillPayment.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<RecurringBillPayment> createRecurring(CreateRecurringBillRequest request) async {
-    final json = await _client.post('/bill-payments/recurring', request.toJson());
+  Future<RecurringBillPayment> createRecurring(
+    CreateRecurringBillRequest request,
+  ) async {
+    final json = await _client.post(
+      '/bill-payments/recurring',
+      request.toJson(),
+    );
     return RecurringBillPayment.fromJson(json!);
   }
 
@@ -46,5 +59,6 @@ class BillApi {
         .toList();
   }
 
-  Future<void> cancelRecurring(String id) => _client.delete('/bill-payments/recurring/$id');
+  Future<void> cancelRecurring(String id) =>
+      _client.delete('/bill-payments/recurring/$id');
 }

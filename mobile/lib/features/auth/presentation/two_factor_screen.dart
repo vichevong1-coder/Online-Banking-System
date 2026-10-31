@@ -5,6 +5,7 @@ import 'package:mobile/core/session/session_manager.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/jwt.dart';
+import 'package:mobile/features/auth/presentation/otp_code_input.dart';
 import 'package:mobile/features/dashboard/presentation/main_dashboard_screen.dart';
 
 class TwoFactorScreen extends StatefulWidget {
@@ -22,7 +23,8 @@ class TwoFactorScreen extends StatefulWidget {
 }
 
 class _TwoFactorScreenState extends State<TwoFactorScreen> {
-  final TextEditingController _codeController = TextEditingController();
+  final GlobalKey<OtpCodeInputState> _codeKey = GlobalKey<OtpCodeInputState>();
+  String _code = '';
   late String _currentChallengeToken;
   bool _isLoading = false;
   bool _isResending = false;
@@ -40,14 +42,16 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    _codeController.dispose();
     super.dispose();
   }
 
   void _initCountdown() {
     final exp = decodeJwtExpiry(_currentChallengeToken);
     if (exp != null) {
-      final diff = (exp.millisecondsSinceEpoch - DateTime.now().millisecondsSinceEpoch) ~/ 1000;
+      final diff =
+          (exp.millisecondsSinceEpoch -
+              DateTime.now().millisecondsSinceEpoch) ~/
+          1000;
       _secondsRemaining = diff > 0 ? diff : 0;
     } else {
       _secondsRemaining = 300;
@@ -55,6 +59,10 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_secondsRemaining > 0) {
         setState(() => _secondsRemaining--);
       } else {
@@ -64,8 +72,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
   }
 
   Future<void> _verify2Fa() async {
-    final code = _codeController.text.trim();
-    if (code.length != 6) {
+    if (_code.length != 6) {
       setState(() => _errorMessage = 'Please enter a 6-digit code');
       return;
     }
@@ -78,7 +85,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
     try {
       final tokens = await AuthApi().verifyTwoFactor(
         challengeToken: _currentChallengeToken,
-        code: code,
+        code: _code,
       );
 
       await SessionManager.instance.saveSession(
@@ -95,9 +102,17 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
         (route) => false,
       );
     } on ApiException catch (e) {
-      setState(() => _errorMessage = e.message);
+      _codeKey.currentState?.clear();
+      setState(() {
+        _code = '';
+        _errorMessage = e.message;
+      });
     } catch (_) {
-      setState(() => _errorMessage = "Couldn't verify 2FA. Please try again.");
+      _codeKey.currentState?.clear();
+      setState(() {
+        _code = '';
+        _errorMessage = "Couldn't verify 2FA. Please try again.";
+      });
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -110,8 +125,12 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
     });
 
     try {
-      final response = await AuthApi().resendTwoFactor(challengeToken: _currentChallengeToken);
+      final response = await AuthApi().resendTwoFactor(
+        challengeToken: _currentChallengeToken,
+      );
       _currentChallengeToken = response.challengeToken;
+      _codeKey.currentState?.clear();
+      setState(() => _code = '');
       _initCountdown();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,11 +157,11 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
+        leading: const BackButton(color: Colors.white),
+        title: const Text(
+          'Two-Factor Authentication',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        title: const Text('Two-Factor Authentication', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -152,13 +171,21 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
             const SizedBox(height: 10),
             const Text(
               'Security Verification',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Please enter the 6-digit authentication code sent to\n${widget.phone}',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: Colors.white70, height: 1.4),
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.white70,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 32),
 
@@ -168,16 +195,25 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
                 decoration: BoxDecoration(
                   color: AppTheme.primaryRed.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.primaryRedLight.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: AppTheme.primaryRedLight.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: AppTheme.primaryRedLight, size: 20),
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppTheme.primaryRedLight,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -186,29 +222,19 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
               const SizedBox(height: 20),
             ],
 
-            GlassCard(
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _codeController,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    maxLength: 6,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 10,
-                      color: Colors.white,
-                    ),
-                    decoration: const InputDecoration(
-                      hintText: '••••••',
-                      counterText: '',
-                      hintStyle: TextStyle(letterSpacing: 10, color: Colors.white38),
-                    ),
-                    onSubmitted: (_) => _verify2Fa(),
-                  ),
-                ],
-              ),
+            OtpCodeInput(
+              key: _codeKey,
+              hasError: _errorMessage != null,
+              onChanged: (code) {
+                setState(() {
+                  _code = code;
+                  if (_errorMessage != null) _errorMessage = null;
+                });
+              },
+              onCompleted: (code) {
+                _code = code;
+                _verify2Fa();
+              },
             ),
             const SizedBox(height: 24),
             Row(
@@ -217,7 +243,9 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
                 Icon(
                   Icons.timer_outlined,
                   size: 16,
-                  color: _secondsRemaining > 0 ? Colors.white70 : AppTheme.primaryRedLight,
+                  color: _secondsRemaining > 0
+                      ? Colors.white70
+                      : AppTheme.primaryRedLight,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -226,7 +254,9 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
                       : 'Code expired. Request a new one.',
                   style: TextStyle(
                     fontSize: 13,
-                    color: _secondsRemaining > 0 ? Colors.white70 : AppTheme.primaryRedLight,
+                    color: _secondsRemaining > 0
+                        ? Colors.white70
+                        : AppTheme.primaryRedLight,
                   ),
                 ),
               ],
@@ -247,7 +277,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
             PrimaryActionButton(
               title: 'VERIFY & SIGN IN',
               isLoading: _isLoading,
-              onPressed: _verify2Fa,
+              onPressed: _code.length == 6 ? _verify2Fa : null,
             ),
           ],
         ),

@@ -33,12 +33,14 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
-  ApiClient({http.Client? client, this.accessToken}) : _client = client ?? http.Client();
+  ApiClient({http.Client? client, this.accessToken})
+    : _client = client ?? http.Client();
 
   final http.Client _client;
   String? accessToken;
 
-  String? get effectiveToken => accessToken ?? SessionManager.instance.accessToken;
+  String? get effectiveToken =>
+      accessToken ?? SessionManager.instance.accessToken;
 
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
@@ -79,21 +81,42 @@ class ApiClient {
     return false;
   }
 
-  Future<Map<String, dynamic>?> post(String path, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>?> post(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
     http.Response response;
     try {
-      response = await _client.post(_uri(path, null), headers: _headers, body: jsonEncode(body));
+      response = await _client.post(
+        _uri(path, null),
+        headers: _headers,
+        body: jsonEncode(body),
+      );
     } catch (_) {
-      throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+      throw ApiException(
+        0,
+        'NETWORK_ERROR',
+        "Couldn't reach the server. Please try again.",
+      );
     }
 
-    if (response.statusCode == 401 && path != '/auth/login' && path != '/auth/refresh') {
+    if (response.statusCode == 401 &&
+        path != '/auth/login' &&
+        path != '/auth/refresh') {
       final refreshed = await _tryRefreshToken();
       if (refreshed) {
         try {
-          response = await _client.post(_uri(path, null), headers: _headers, body: jsonEncode(body));
+          response = await _client.post(
+            _uri(path, null),
+            headers: _headers,
+            body: jsonEncode(body),
+          );
         } catch (_) {
-          throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+          throw ApiException(
+            0,
+            'NETWORK_ERROR',
+            "Couldn't reach the server. Please try again.",
+          );
         }
       }
     }
@@ -113,7 +136,11 @@ class ApiClient {
     try {
       response = await _client.get(_uri(path, query), headers: _headers);
     } catch (_) {
-      throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+      throw ApiException(
+        0,
+        'NETWORK_ERROR',
+        "Couldn't reach the server. Please try again.",
+      );
     }
 
     if (response.statusCode == 401) {
@@ -122,7 +149,11 @@ class ApiClient {
         try {
           response = await _client.get(_uri(path, query), headers: _headers);
         } catch (_) {
-          throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+          throw ApiException(
+            0,
+            'NETWORK_ERROR',
+            "Couldn't reach the server. Please try again.",
+          );
         }
       }
     }
@@ -137,21 +168,40 @@ class ApiClient {
     throw _toApiException(response);
   }
 
-  Future<Map<String, dynamic>?> patch(String path, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>?> patch(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
     http.Response response;
     try {
-      response = await _client.patch(_uri(path, null), headers: _headers, body: jsonEncode(body));
+      response = await _client.patch(
+        _uri(path, null),
+        headers: _headers,
+        body: jsonEncode(body),
+      );
     } catch (_) {
-      throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+      throw ApiException(
+        0,
+        'NETWORK_ERROR',
+        "Couldn't reach the server. Please try again.",
+      );
     }
 
     if (response.statusCode == 401) {
       final refreshed = await _tryRefreshToken();
       if (refreshed) {
         try {
-          response = await _client.patch(_uri(path, null), headers: _headers, body: jsonEncode(body));
+          response = await _client.patch(
+            _uri(path, null),
+            headers: _headers,
+            body: jsonEncode(body),
+          );
         } catch (_) {
-          throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+          throw ApiException(
+            0,
+            'NETWORK_ERROR',
+            "Couldn't reach the server. Please try again.",
+          );
         }
       }
     }
@@ -171,7 +221,11 @@ class ApiClient {
     try {
       response = await _client.delete(_uri(path, null), headers: _headers);
     } catch (_) {
-      throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+      throw ApiException(
+        0,
+        'NETWORK_ERROR',
+        "Couldn't reach the server. Please try again.",
+      );
     }
 
     if (response.statusCode == 401) {
@@ -180,7 +234,11 @@ class ApiClient {
         try {
           response = await _client.delete(_uri(path, null), headers: _headers);
         } catch (_) {
-          throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+          throw ApiException(
+            0,
+            'NETWORK_ERROR',
+            "Couldn't reach the server. Please try again.",
+          );
         }
       }
     }
@@ -197,7 +255,11 @@ class ApiClient {
     try {
       response = await _client.get(_uri(path, query), headers: _headers);
     } catch (_) {
-      throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+      throw ApiException(
+        0,
+        'NETWORK_ERROR',
+        "Couldn't reach the server. Please try again.",
+      );
     }
 
     if (response.statusCode == 401) {
@@ -206,7 +268,11 @@ class ApiClient {
         try {
           response = await _client.get(_uri(path, query), headers: _headers);
         } catch (_) {
-          throw ApiException(0, 'NETWORK_ERROR', "Couldn't reach the server. Please try again.");
+          throw ApiException(
+            0,
+            'NETWORK_ERROR',
+            "Couldn't reach the server. Please try again.",
+          );
         }
       }
     }
@@ -227,10 +293,19 @@ class ApiClient {
     }
 
     final code = decoded?['error'] as String? ?? 'UNKNOWN_ERROR';
-    final message = decoded?['message'] as String? ?? 'Something went wrong. Please try again.';
+    final message =
+        decoded?['message'] as String? ??
+        'Something went wrong. Please try again.';
     final rawFieldErrors = decoded?['fieldErrors'] as Map<String, dynamic>?;
-    final fieldErrors = rawFieldErrors?.map((key, value) => MapEntry(key, value.toString()));
+    final fieldErrors = rawFieldErrors?.map(
+      (key, value) => MapEntry(key, value.toString()),
+    );
 
-    return ApiException(response.statusCode, code, message, fieldErrors: fieldErrors);
+    return ApiException(
+      response.statusCode,
+      code,
+      message,
+      fieldErrors: fieldErrors,
+    );
   }
 }

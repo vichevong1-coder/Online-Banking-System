@@ -6,13 +6,18 @@ class NotificationApi {
 
   final ApiClient _client;
 
-  Future<List<NotificationModel>> listNotifications({int page = 0, int size = 20}) async {
-    final json = await _client.get('/notifications', query: {
-      'page': page.toString(),
-      'size': size.toString(),
-    });
+  Future<List<NotificationModel>> listNotifications({
+    int page = 0,
+    int size = 20,
+  }) async {
+    final json = await _client.get(
+      '/notifications',
+      query: {'page': page.toString(), 'size': size.toString()},
+    );
     final content = (json as Map<String, dynamic>)['content'] as List<dynamic>;
-    return content.map((e) => NotificationModel.fromJson(e as Map<String, dynamic>)).toList();
+    return content
+        .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<int> getUnreadCount() async {
@@ -21,5 +26,6 @@ class NotificationApi {
   }
 
   /// The backend exposes this as PATCH, not POST.
-  Future<void> markAsRead(String id) => _client.patch('/notifications/$id/read', {});
+  Future<void> markAsRead(String id) =>
+      _client.patch('/notifications/$id/read', {});
 }

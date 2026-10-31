@@ -19,7 +19,9 @@ class ObsApp extends StatelessWidget {
         // screen would flash sign-in at a customer who is already signed in.
         final Widget home = !session.isInitialized
             ? const _SplashScreen()
-            : (session.isAuthenticated ? const MainDashboardScreen() : const WelcomeLandingScreen());
+            : (session.isAuthenticated
+                  ? const MainDashboardScreen()
+                  : const WelcomeLandingScreen());
 
         return MaterialApp(
           key: ValueKey(session.isAuthenticated),
@@ -48,7 +50,10 @@ class _SplashScreen extends StatelessWidget {
             SizedBox(
               width: 22,
               height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.emeraldLight),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppTheme.emeraldLight,
+              ),
             ),
           ],
         ),

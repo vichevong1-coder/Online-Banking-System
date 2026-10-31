@@ -80,9 +80,15 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: isExpiry ? now.add(const Duration(days: 365)) : DateTime(now.year - 25),
-      firstDate: isExpiry ? now.add(const Duration(days: 1)) : DateTime(now.year - 120),
-      lastDate: isExpiry ? DateTime(now.year + 20) : now.subtract(const Duration(days: 1)),
+      initialDate: isExpiry
+          ? now.add(const Duration(days: 365))
+          : DateTime(now.year - 25),
+      firstDate: isExpiry
+          ? now.add(const Duration(days: 1))
+          : DateTime(now.year - 120),
+      lastDate: isExpiry
+          ? DateTime(now.year + 20)
+          : now.subtract(const Duration(days: 1)),
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -103,7 +109,10 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
     // The pickers and the dropdown sit outside the Form's validation, so they
     // are checked by hand rather than silently submitting as null.
     if (_nidExpiryDate == null || _dateOfBirth == null || _gender == null) {
-      setState(() => _errorMessage = 'Please choose your NID expiry date, date of birth and gender.');
+      setState(
+        () => _errorMessage =
+            'Please choose your NID expiry date, date of birth and gender.',
+      );
       return;
     }
     if (!isValid) return;
@@ -147,7 +156,10 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _errorMessage = "Couldn't complete registration. Please try again.");
+      setState(
+        () =>
+            _errorMessage = "Couldn't complete registration. Please try again.",
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -173,7 +185,10 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
           children: [
             Icon(icon, size: 15, color: Colors.white70),
             const SizedBox(width: 6),
-            Text(label, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            ),
           ],
         ),
         const SizedBox(height: 4),
@@ -184,15 +199,27 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
           maxLength: maxLength,
           inputFormatters: inputFormatters,
           textCapitalization: textCapitalization,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
           decoration: InputDecoration(
             isDense: true,
             hintText: hint,
-            hintStyle: const TextStyle(fontSize: 13, color: Colors.white24, fontWeight: FontWeight.normal),
+            hintStyle: const TextStyle(
+              fontSize: 13,
+              color: Colors.white24,
+              fontWeight: FontWeight.normal,
+            ),
             counterText: '',
             contentPadding: const EdgeInsets.symmetric(vertical: 6),
-            border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-            enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+            border: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white24),
+            ),
+            enabledBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white24),
+            ),
             focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: AppTheme.emeraldLight, width: 1.5),
             ),
@@ -202,11 +229,14 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
                       size: 18,
                       color: Colors.white54,
                     ),
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   )
                 : null,
           ),
@@ -232,7 +262,10 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
           children: [
             Icon(icon, size: 15, color: Colors.white70),
             const SizedBox(width: 6),
-            Text(label, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -249,7 +282,13 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
         ),
         const Divider(color: Colors.white24, height: 16),
         if (errorText != null)
-          Text(errorText, style: const TextStyle(color: AppTheme.primaryRedLight, fontSize: 11)),
+          Text(
+            errorText,
+            style: const TextStyle(
+              color: AppTheme.primaryRedLight,
+              fontSize: 11,
+            ),
+          ),
         const SizedBox(height: 8),
       ],
     );
@@ -262,12 +301,20 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Your details',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
       ),
       body: SafeArea(
@@ -282,12 +329,20 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                 const SizedBox(height: 28),
                 const Text(
                   'Tell us who you are',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'These details come straight off your Cambodian national ID card, and set the password for ${widget.phone}.',
-                  style: const TextStyle(fontSize: 13, color: Colors.white70, height: 1.5),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.white70,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -297,16 +352,25 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                     decoration: BoxDecoration(
                       color: AppTheme.primaryRed.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppTheme.primaryRedLight.withValues(alpha: 0.5)),
+                      border: Border.all(
+                        color: AppTheme.primaryRedLight.withValues(alpha: 0.5),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline, color: AppTheme.primaryRedLight, size: 18),
+                        const Icon(
+                          Icons.error_outline,
+                          color: AppTheme.primaryRedLight,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ],
@@ -329,7 +393,9 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                               controller: _firstNameController,
                               textCapitalization: TextCapitalization.words,
                               validator: (v) => _validate('firstName', v),
-                              onChanged: () => setState(() => _serverFieldErrors.remove('firstName')),
+                              onChanged: () => setState(
+                                () => _serverFieldErrors.remove('firstName'),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -341,7 +407,9 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                               controller: _lastNameController,
                               textCapitalization: TextCapitalization.words,
                               validator: (v) => _validate('lastName', v),
-                              onChanged: () => setState(() => _serverFieldErrors.remove('lastName')),
+                              onChanged: () => setState(
+                                () => _serverFieldErrors.remove('lastName'),
+                              ),
                             ),
                           ),
                         ],
@@ -357,9 +425,17 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                               controller: _nidController,
                               keyboardType: TextInputType.number,
                               maxLength: _nidNumberLength,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                              validator: (v) => _validate('nidNumber', v, exactLength: _nidNumberLength),
-                              onChanged: () => setState(() => _serverFieldErrors.remove('nidNumber')),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              validator: (v) => _validate(
+                                'nidNumber',
+                                v,
+                                exactLength: _nidNumberLength,
+                              ),
+                              onChanged: () => setState(
+                                () => _serverFieldErrors.remove('nidNumber'),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -393,9 +469,19 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                               children: [
                                 const Row(
                                   children: [
-                                    Icon(Icons.wc_outlined, size: 15, color: Colors.white70),
+                                    Icon(
+                                      Icons.wc_outlined,
+                                      size: 15,
+                                      color: Colors.white70,
+                                    ),
                                     SizedBox(width: 6),
-                                    Text('Gender', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                                    Text(
+                                      'Gender',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 4),
@@ -404,18 +490,30 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                                   isExpanded: true,
                                   hint: const Text(
                                     'Select',
-                                    style: TextStyle(fontSize: 14, color: Colors.white24),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.white24,
+                                    ),
                                   ),
-                                  dropdownColor: const Color(0xFF0A2B24),
-                                  underline: const Divider(color: Colors.white24, height: 1),
+                                  dropdownColor: AppTheme.surfaceElevated,
+                                  underline: const Divider(
+                                    color: Colors.white24,
+                                    height: 1,
+                                  ),
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
                                   ),
                                   items: const [
-                                    DropdownMenuItem(value: Gender.female, child: Text('Female')),
-                                    DropdownMenuItem(value: Gender.male, child: Text('Male')),
+                                    DropdownMenuItem(
+                                      value: Gender.female,
+                                      child: Text('Female'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: Gender.male,
+                                      child: Text('Male'),
+                                    ),
                                   ],
                                   onChanged: (val) => setState(() {
                                     _gender = val;
@@ -425,7 +523,10 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                                 if (_serverFieldErrors['gender'] != null)
                                   Text(
                                     _serverFieldErrors['gender']!,
-                                    style: const TextStyle(color: AppTheme.primaryRedLight, fontSize: 11),
+                                    style: const TextStyle(
+                                      color: AppTheme.primaryRedLight,
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 const SizedBox(height: 8),
                               ],
@@ -446,7 +547,9 @@ class _ConfirmDetailsScreenState extends State<ConfirmDetailsScreen> {
                           minLength: _minPasswordLength,
                           label: 'Password',
                         ),
-                        onChanged: () => setState(() => _serverFieldErrors.remove('password')),
+                        onChanged: () => setState(
+                          () => _serverFieldErrors.remove('password'),
+                        ),
                       ),
                     ],
                   ),
