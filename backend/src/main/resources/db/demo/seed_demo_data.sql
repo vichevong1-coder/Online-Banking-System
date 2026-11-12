@@ -3,6 +3,9 @@
 --   docker exec -i obs-postgres psql -U obs -d obs \
 --       < backend/src/main/resources/db/demo/seed_demo_data.sql
 --
+-- Demo KYC image files (for Kosal Rith's pending review) can be generated with:
+--   python3 backend/scripts/generate-demo-kyc-images.py
+--
 -- Why not a migration: anything Flyway picks up also runs in tests and in CI,
 -- and demo customers with known passwords have no business in either. This
 -- script stays outside spring.flyway.locations so it only ever runs when you
@@ -20,6 +23,10 @@
 BEGIN;
 
 -- Clean out previous demo rows, children first (FKs).
+DELETE FROM kyc_documents WHERE id::text LIKE '7a000000-%'
+   OR user_id IN (SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
+UPDATE users SET reviewed_by = NULL WHERE reviewed_by IN (
+    SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
 DELETE FROM recurring_bill_payments WHERE user_id IN (
     SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
 DELETE FROM bill_payments WHERE user_id IN (
@@ -53,46 +60,8 @@ DELETE FROM notifications WHERE user_id IN (
 DELETE FROM accounts WHERE user_id IN (
     SELECT id FROM users WHERE id::text LIKE 'd0000000-%');
 DELETE FROM audit_logs WHERE id::text LIKE '9a000000-%';
+DELETE FROM login_attempts;
 DELETE FROM users WHERE id::text LIKE 'd0000000-%';
-
--- ---------------------------------------------------------------- customers
--- email stays NULL: customers are identified by phone (US-007/US-009) and the
--- KYC form collects no email address. phone_verified = TRUE so they can log in
--- without walking the OTP flow first — except Vibol, see below.
---
--- Sophea is the one exception, and it is not a KYC field on her: US-020 makes
--- email an optional *profile* field a customer sets after registering, so her
--- row is what one looks like once PATCH /me has been used. Without a single
--- address on file, POST /statements/{id}/email has no reachable happy path and
--- can only ever demo its no-address-set error. Mailpit catches the mail.
-INSERT INTO users (id, first_name, last_name, password_hash, email, nid_number,
-                   nid_expiry_date, date_of_birth, gender, phone, role, status,
-                   phone_verified, created_at) VALUES
-('d0000000-0000-0000-0000-000000000001', 'Sophea', 'Chan',
- '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'sophea.chan@example.com',
- '012345678', '2030-04-12', '1994-03-08', 'FEMALE', '+85512000001',
- 'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '95 days'),
-('d0000000-0000-0000-0000-000000000002', 'Dara', 'Sok',
- '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
- '023456789', '2029-11-30', '1988-07-22', 'MALE', '+85512000002',
- 'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '92 days'),
-('d0000000-0000-0000-0000-000000000003', 'Nita', 'Pich',
- '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
- '034567890', '2031-01-15', '1999-12-02', 'FEMALE', '+85512000003',
- 'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '80 days'),
--- Deliberately SUSPENDED: gives US-006's login-path enforcement and US-048's
--- admin status actions something real to demo. This account cannot log in.
-('d0000000-0000-0000-0000-000000000004', 'Vibol', 'Keo',
- '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
- '045678901', '2028-06-08', '1991-09-17', 'MALE', '+85512000004',
- 'CUSTOMER', 'SUSPENDED', TRUE, now() - INTERVAL '30 days'),
--- Holds the three merchants' settlement accounts (US-034). Merchants are not
--- users and never log in; accounts.user_id is NOT NULL, so the demo's merchant
--- accounts need an owner and this is it. Nothing logs in as this customer.
-('d0000000-0000-0000-0000-000000000005', 'Merchant', 'Settlement',
- '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
- '056789012', '2032-02-20', '1985-05-05', 'MALE', '+85512000005',
- 'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '100 days');
 
 -- ------------------------------------------------------------------- staff
 -- US-047/US-051. Staff are ADMIN or TELLER users: Role is CUSTOMER | ADMIN | TELLER, and
@@ -104,28 +73,100 @@ INSERT INTO users (id, first_name, last_name, password_hash, email, nid_number,
 -- Emails and phones are deliberately distinct from V2's admin@obs.local /
 -- +855000000000 so neither UNIQUE constraint collides with the bootstrap row.
 --
+-- Inserted before customers so customer.reviewed_by foreign keys can reference staff.
 -- These share the d0000000- prefix so the delete block above already covers them.
 INSERT INTO users (id, first_name, last_name, password_hash, email, nid_number,
                    nid_expiry_date, date_of_birth, gender, phone, role, status,
-                   phone_verified, created_at) VALUES
+                   phone_verified, created_at, rejection_reason, reviewed_by, reviewed_at) VALUES
 ('d0000000-0000-0000-0000-000000000011', 'Sovann', 'Meas',
  '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'sovann.meas@obs.local',
  NULL, NULL, NULL, NULL, '+85511900001',
- 'ADMIN', 'ACTIVE', TRUE, now() - INTERVAL '88 days'),
+ 'ADMIN', 'ACTIVE', TRUE, now() - INTERVAL '88 days', NULL, NULL, NULL),
 ('d0000000-0000-0000-0000-000000000012', 'Chanda', 'Ly',
  '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'chanda.ly@obs.local',
  NULL, NULL, NULL, NULL, '+85511900002',
- 'ADMIN', 'ACTIVE', TRUE, now() - INTERVAL '60 days'),
+ 'ADMIN', 'ACTIVE', TRUE, now() - INTERVAL '60 days', NULL, NULL, NULL),
 -- SUSPENDED, mirroring Vibol on the customer side: US-006's login-path check is
 -- role-independent, and the staff table needs a non-ACTIVE row to render.
 ('d0000000-0000-0000-0000-000000000013', 'Rithy', 'Noun',
  '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'rithy.noun@obs.local',
  NULL, NULL, NULL, NULL, '+85511900003',
- 'ADMIN', 'SUSPENDED', TRUE, now() - INTERVAL '25 days'),
+ 'ADMIN', 'SUSPENDED', TRUE, now() - INTERVAL '25 days', NULL, NULL, NULL),
 ('d0000000-0000-0000-0000-000000000014', 'Bopha', 'Lim',
  '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'bopha.lim@obs.local',
  NULL, NULL, NULL, NULL, '+85511900004',
- 'TELLER', 'ACTIVE', TRUE, now() - INTERVAL '10 days');
+ 'TELLER', 'ACTIVE', TRUE, now() - INTERVAL '10 days', NULL, NULL, NULL);
+
+-- ---------------------------------------------------------------- customers
+-- email stays NULL: customers are identified by phone (US-007/US-009) and the
+-- KYC form collects no email address. phone_verified = TRUE so they can log in
+-- without walking the OTP flow first — except Vibol, see below.
+--
+-- Sophea is the one exception, and it is not a KYC field on her: US-020 makes
+-- email an optional *profile* field a customer sets after registering, so her
+-- row is what one looks like once PATCH /me has been used. Without a single
+-- address on file, POST /statements/{id}/email has no reachable happy path and
+-- can only ever demo its no-address-set error. Mailpit catches the mail.
+--
+-- V16 KYC review columns: rejection_reason, reviewed_by, reviewed_at.
+INSERT INTO users (id, first_name, last_name, password_hash, email, nid_number,
+                   nid_expiry_date, date_of_birth, gender, phone, role, status,
+                   phone_verified, created_at, rejection_reason, reviewed_by, reviewed_at) VALUES
+('d0000000-0000-0000-0000-000000000001', 'Sophea', 'Chan',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'sophea.chan@example.com',
+ '012345678', '2030-04-12', '1994-03-08', 'FEMALE', '+85512000001',
+ 'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '95 days', NULL, 'd0000000-0000-0000-0000-000000000011', now() - INTERVAL '95 days'),
+('d0000000-0000-0000-0000-000000000002', 'Dara', 'Sok',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
+ '023456789', '2029-11-30', '1988-07-22', 'MALE', '+85512000002',
+ 'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '92 days', NULL, 'd0000000-0000-0000-0000-000000000014', now() - INTERVAL '92 days'),
+('d0000000-0000-0000-0000-000000000003', 'Nita', 'Pich',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
+ '034567890', '2031-01-15', '1999-12-02', 'FEMALE', '+85512000003',
+ 'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '80 days', NULL, 'd0000000-0000-0000-0000-000000000012', now() - INTERVAL '80 days'),
+-- Deliberately SUSPENDED: gives US-006's login-path enforcement and US-048's
+-- admin status actions something real to demo. This account cannot log in.
+('d0000000-0000-0000-0000-000000000004', 'Vibol', 'Keo',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
+ '045678901', '2028-06-08', '1991-09-17', 'MALE', '+85512000004',
+ 'CUSTOMER', 'SUSPENDED', TRUE, now() - INTERVAL '30 days', NULL, 'd0000000-0000-0000-0000-000000000011', now() - INTERVAL '30 days'),
+-- Holds the three merchants' settlement accounts (US-034). Merchants are not
+-- users and never log in; accounts.user_id is NOT NULL, so the demo's merchant
+-- accounts need an owner and this is it. Nothing logs in as this customer.
+('d0000000-0000-0000-0000-000000000005', 'Merchant', 'Settlement',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
+ '056789012', '2032-02-20', '1985-05-05', 'MALE', '+85512000005',
+ 'CUSTOMER', 'ACTIVE', TRUE, now() - INTERVAL '100 days', NULL, NULL, NULL),
+-- PENDING_APPROVAL customer: gives web-admin /kyc review console a real application
+-- to inspect, approve, or reject. Uploaded all 3 required KYC images.
+('d0000000-0000-0000-0000-000000000006', 'Kosal', 'Rith',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
+ '067890123', '2033-05-15', '1995-08-20', 'MALE', '+85512000006',
+ 'CUSTOMER', 'PENDING_APPROVAL', TRUE, now() - INTERVAL '3 hours', NULL, NULL, NULL),
+-- REJECTED customer: demos the rejected banner on mobile login and shows rejection
+-- history in admin customer views.
+('d0000000-0000-0000-0000-000000000007', 'Chenda', 'Sam',
+ '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', NULL,
+ '078901234', '2031-10-10', '1998-12-14', 'FEMALE', '+85512000007',
+ 'CUSTOMER', 'REJECTED', TRUE, now() - INTERVAL '2 days',
+ 'NID photo is blurry and illegible. Please re-take with better lighting.',
+ 'd0000000-0000-0000-0000-000000000014', now() - INTERVAL '1 day');
+
+-- ------------------------------------------------------------ kyc documents (V16)
+-- Seeded KYC documents for Kosal Rith (d0000000-...06) so the US-054 /kyc review queue
+-- has a complete application holding all 3 required images (NID_FRONT, NID_BACK, SELFIE).
+-- The corresponding encrypted image files are written in data/kyc via
+-- backend/scripts/generate-demo-kyc-images.py.
+INSERT INTO kyc_documents (id, user_id, type, storage_key, content_type, size_bytes, sha256, created_at) VALUES
+('7a000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000006',
+ 'NID_FRONT', '7a000000-0000-0000-0000-000000000001.enc', 'image/jpeg', 10836,
+ '602f27dd5d319e147511918460718aa0c6fa6c5990daddf82f4e9bada0135129', now() - INTERVAL '3 hours'),
+('7a000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000006',
+ 'NID_BACK',  '7a000000-0000-0000-0000-000000000002.enc', 'image/jpeg', 10490,
+ 'c9c8aa8e93a7bddaddc64ab668cc8c7fb85ffbb08b3201a13e6f529552dbfa4f', now() - INTERVAL '3 hours'),
+('7a000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000006',
+ 'SELFIE',    '7a000000-0000-0000-0000-000000000003.enc', 'image/jpeg', 9806,
+ 'f34c9a44440c75dc33a79b62b7bd50d2c807b2204dc397b10162307ffce5a9e7', now() - INTERVAL '3 hours');
 
 -- ----------------------------------------------------------------- accounts
 -- Demo account numbers use the 9000000000xx block so they cannot collide with
@@ -282,14 +323,14 @@ INSERT INTO bill_providers (id, name, category, account_number_pattern, is_activ
 -- settlement_account_id — but never add a "DELETE FROM cards WHERE id::text LIKE
 -- 'c0000000-%'", which would read as correct and take the three QR merchants too.
 --
--- pin_hash is a bcrypt hash like a password (never a PIN in clear), and only a
--- masked number is ever stored.
+-- pin_hash is a bcrypt hash of a 4-digit PIN '1234' ($2a$10$EU6f1zAquKa72XmbAGXeJuacZj/XkoZYBiIR5ryETa0LnKmn37ql6).
+-- Only a masked number is ever stored.
 INSERT INTO cards (id, user_id, account_id, card_holder_name, card_number_masked, card_number_last_four, pin_hash, card_type, status, expiry_date, daily_limit, per_transaction_limit, created_at, updated_at) VALUES
-('c0000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'SOPHEA CHAN', '411122******1234', '1234', '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'DEBIT', 'ACTIVE', '12/28', 1000.0000, 500.0000, now() - INTERVAL '60 days', now() - INTERVAL '60 days'),
-('c0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', 'DARA SOK', '411122******5678', '5678', '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'DEBIT', 'ACTIVE', '09/27', 2000.0000, 1000.0000, now() - INTERVAL '40 days', now() - INTERVAL '40 days'),
+('c0000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'SOPHEA CHAN', '411122******1234', '1234', '$2a$10$EU6f1zAquKa72XmbAGXeJuacZj/XkoZYBiIR5ryETa0LnKmn37ql6', 'DEBIT', 'ACTIVE', '12/28', 1000.0000, 500.0000, now() - INTERVAL '60 days', now() - INTERVAL '60 days'),
+('c0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', 'DARA SOK', '411122******5678', '5678', '$2a$10$EU6f1zAquKa72XmbAGXeJuacZj/XkoZYBiIR5ryETa0LnKmn37ql6', 'DEBIT', 'ACTIVE', '09/27', 2000.0000, 1000.0000, now() - INTERVAL '40 days', now() - INTERVAL '40 days'),
 -- BLOCKED, so POST /cards/{id}/unblock (US-044) has a target on a fresh database.
 -- Pairs with Nita's "Card blocked" notification below.
-('c0000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000004', 'NITA PICH', '411122******9012', '9012', '$2a$10$CPvFtm.yHrdrzSprtnnBueL/7ElKS8l65dN1LvRN1SXvgGiHxc/wy', 'DEBIT', 'BLOCKED', '03/29', 1000.0000, 500.0000, now() - INTERVAL '35 days', now() - INTERVAL '4 days'),
+('c0000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000004', 'NITA PICH', '411122******9012', '9012', '$2a$10$EU6f1zAquKa72XmbAGXeJuacZj/XkoZYBiIR5ryETa0LnKmn37ql6', 'DEBIT', 'BLOCKED', '03/29', 1000.0000, 500.0000, now() - INTERVAL '35 days', now() - INTERVAL '4 days'),
 -- pin_hash NULL: a card issued but never activated, which is the state PATCH
 -- /cards/{id} (US-045) sets a PIN from. The column is nullable for this reason.
 ('c0000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000005', 'NITA PICH', '411122******3456', '3456', NULL, 'DEBIT', 'ACTIVE', '06/30', 1000.0000, 500.0000, now() - INTERVAL '10 days', now() - INTERVAL '10 days');
@@ -415,5 +456,17 @@ INSERT INTO audit_logs (id, actor_id, actor_email, action_type, entity_id, entit
 ('9a000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000012', 'chanda.ly@obs.local',
  'CUSTOMER_CREATED', 'd0000000-0000-0000-0000-000000000003', 'USER', 'Staff created customer', '192.168.1.102', now() - INTERVAL '80 days'),
 ('9a000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-000000000014', 'bopha.lim@obs.local',
- 'CUSTOMER_UPDATED', 'd0000000-0000-0000-0000-000000000001', 'USER', 'Staff updated customer details', '192.168.1.200', now() - INTERVAL '1 day');
+ 'CUSTOMER_UPDATED', 'd0000000-0000-0000-0000-000000000001', 'USER', 'Staff updated customer details', '192.168.1.200', now() - INTERVAL '1 day'),
+('9a000000-0000-0000-0000-000000000005', 'd0000000-0000-0000-0000-000000000014', 'bopha.lim@obs.local',
+ 'KYC_REJECTED', 'd0000000-0000-0000-0000-000000000007', 'USER', 'KYC application rejected', '192.168.1.200', now() - INTERVAL '1 day'),
+('9a000000-0000-0000-0000-000000000006', 'd0000000-0000-0000-0000-000000000011', 'sovann.meas@obs.local',
+ 'KYC_APPROVED', 'd0000000-0000-0000-0000-000000000001', 'USER', 'KYC application approved', '192.168.1.55', now() - INTERVAL '95 days');
+
+-- ------------------------------------------------------------ login attempts
+-- Keep two realistic failed attempts so US-053's security KPI shows a clean count (2)
+-- rather than 0 or dozens of messy test typos.
+INSERT INTO login_attempts (id, identifier, success, ip_address, created_at) VALUES
+('fa000000-0000-0000-0000-000000000001', '+85512000002', FALSE, '192.168.1.105', now() - INTERVAL '4 hours'),
+('fa000000-0000-0000-0000-000000000002', '+85512000002', FALSE, '192.168.1.105', now() - INTERVAL '3 hours 58 minutes');
+
 COMMIT;

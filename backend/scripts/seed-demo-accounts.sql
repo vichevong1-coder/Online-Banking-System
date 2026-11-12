@@ -1,3 +1,10 @@
+-- [DEPRECATED / LEGACY]
+-- NOTE: DO NOT USE THIS FILE FOR DEMO SEEDING.
+-- The unified, single source of truth for demo seed data is:
+--   backend/src/main/resources/db/demo/seed_demo_data.sql
+--
+-- This legacy file is retained for reference only.
+-- -----------------------------------------------------------------------------
 -- Opens 1 account each for the 5 demo customers from seed-demo-customers.sql (run that first).
 -- Alternates SAVINGS/USD and CHECKING/KHR so both account types and currencies show up in
 -- demo data for GET /accounts, GET /accounts/{id}/balance, and the statement PDF.

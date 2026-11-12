@@ -1,3 +1,10 @@
+-- [DEPRECATED / LEGACY]
+-- NOTE: DO NOT USE THIS FILE FOR DEMO SEEDING.
+-- The unified, single source of truth for demo seed data is:
+--   backend/src/main/resources/db/demo/seed_demo_data.sql
+--
+-- This legacy file is retained for reference only.
+-- -----------------------------------------------------------------------------
 -- Seeds 5 login-ready CUSTOMER rows for local demo/testing.
 --
 -- Run against the local dev database:

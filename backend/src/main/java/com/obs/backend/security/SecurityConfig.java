@@ -37,9 +37,10 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource(
             @Value("${web-admin.origin:http://localhost:5173}") String webAdminOrigin) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(webAdminOrigin));
+        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowCredentials(true);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
