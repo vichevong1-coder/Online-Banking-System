@@ -25,7 +25,7 @@ class ObsApp extends StatelessWidget {
 
         return MaterialApp(
           key: ValueKey(session.isAuthenticated),
-          title: 'Online Banking',
+          title: 'CBA',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.darkTheme,
           home: home,
@@ -40,14 +40,34 @@ class _SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const GradientScaffold(
+    return GradientScaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.account_balance, size: 56, color: Colors.white),
-            SizedBox(height: 20),
-            SizedBox(
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryEmerald.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const SizedBox(
               width: 22,
               height: 22,
               child: CircularProgressIndicator(

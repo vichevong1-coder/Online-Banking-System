@@ -25,20 +25,28 @@ class WelcomeLandingScreen extends StatelessWidget {
             const Spacer(flex: 3),
             // Bank Logo / Icon
             Container(
-              width: 80,
-              height: 80,
+              width: 88,
+              height: 88,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryEmerald.withValues(alpha: 0.35),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                  ),
+                ],
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.25),
+                  color: AppTheme.emeraldLight.withValues(alpha: 0.3),
                   width: 1.5,
                 ),
               ),
-              child: const Icon(
-                Icons.account_balance,
-                size: 40,
-                color: Colors.white,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             const SizedBox(height: 20),
