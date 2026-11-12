@@ -1,3 +1,5 @@
+import { authFetch } from "@/lib/api-client"
+
 export interface AuditLog {
   id: string
   actorId: string
@@ -32,18 +34,22 @@ export async function getAuditLogs(
   query.set("page", params.page.toString())
   query.set("size", params.size.toString())
   if (params.actionType) query.set("actionType", params.actionType)
-  if (params.startDate) query.set("startDate", params.startDate)
-  if (params.endDate) query.set("endDate", params.endDate)
-
-  const response = await fetch(`/api/admin/audit-logs?${query.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch audit logs")
+  if (params.startDate) {
+    const formatted = params.startDate.includes("T")
+      ? params.startDate
+      : `${params.startDate}T00:00:00Z`
+    query.set("startDate", formatted)
   }
-  return response.json()
+  if (params.endDate) {
+    const formatted = params.endDate.includes("T")
+      ? params.endDate
+      : `${params.endDate}T23:59:59Z`
+    query.set("endDate", formatted)
+  }
+
+  return authFetch<AuditLogListResponse>(
+    `/admin/audit-logs?${query.toString()}`,
+    token,
+  )
 }
+

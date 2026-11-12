@@ -262,6 +262,7 @@ export function RolesPage() {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
                   >
                     <option value="ADMIN">ADMIN</option>
+                    <option value="TELLER">TELLER</option>
                   </select>
                 </div>
 
@@ -326,6 +327,7 @@ export function RolesPage() {
               onChange={(e) => setEditRole(e.target.value as Role)}
             >
               <option value="ADMIN">ADMIN</option>
+              <option value="TELLER">TELLER</option>
             </select>
           </div>
 
