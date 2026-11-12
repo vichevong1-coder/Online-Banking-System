@@ -25,7 +25,7 @@ services:
       POSTGRES_USER: ${DB_USERNAME:-obs}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-obs}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -42,8 +42,8 @@ services:
     image: axllent/mailpit:v1.21
     container_name: obs-mailpit
     ports:
-      - "1025:1025"   # SMTP — spring.mail.port
-      - "8025:8025"   # web inbox — http://localhost:8025
+      - "127.0.0.1:1025:1025"   # SMTP — spring.mail.port
+      - "127.0.0.1:8025:8025"   # web inbox — http://localhost:8025
     environment:
       MP_MAX_MESSAGES: 500
       # Accept any credentials and plain-text auth: this is a throwaway local

@@ -49,5 +49,6 @@ Thumbs.db
 
 # === Local KYC image storage (encrypted, still never committed) ===
 backend/data/
+data/
 
 
